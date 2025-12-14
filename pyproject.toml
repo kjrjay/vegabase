@@ -1,0 +1,39 @@
+[project]
+name = "pyreact-start"
+version = "0.1.0"
+description = "Full-stack React + Python with zero configuration. Build modern React apps with FastAPI, Bun, Inertia.js, and Tailwind CSS."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+keywords = ["react", "fastapi", "bun", "inertia", "tailwind", "ssr", "full-stack"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+]
+dependencies = [
+    "fastapi>=0.115.8",
+    "httpx>=0.27.0",
+]
+
+[project.scripts]
+pyreact = "pyreact_start.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/kjrjay/pyreact-start"
+Repository = "https://github.com/kjrjay/pyreact-start"
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+source-exclude = [
+    "node_modules",
+    "examples",
+    ".github",
+]
