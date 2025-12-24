@@ -225,3 +225,102 @@ class TestTransaction:
         with db.connection() as conn:
             user = conn.maybe_one(q)
             assert user is None
+
+
+class TestExecute:
+    """Test conn.execute() method for mutations."""
+
+    def test_execute_insert_returns_rowcount(self, db):
+        from sqlalchemy import insert
+
+        with db.transaction() as conn:
+            count = conn.execute(
+                insert(users).values(id=10, name="Eve", email="eve@example.com")
+            )
+            assert count == 1
+
+    def test_execute_update_returns_rowcount(self, db):
+        from sqlalchemy import update
+
+        with db.transaction() as conn:
+            count = conn.execute(
+                update(users).where(users.c.id == 1).values(name="Alice Updated")
+            )
+            assert count == 1
+
+    def test_execute_delete_returns_rowcount(self, db):
+        from sqlalchemy import delete
+
+        with db.transaction() as conn:
+            count = conn.execute(delete(users).where(users.c.id == 1))
+            assert count == 1
+
+
+class TestScalar:
+    """Test conn.scalar() method for aggregate queries."""
+
+    def test_scalar_returns_count(self, db):
+        from sqlalchemy import func
+
+        with db.connection() as conn:
+            count = conn.scalar(select(func.count()).select_from(users))
+            assert count == 2
+
+    def test_scalar_returns_max(self, db):
+        from sqlalchemy import func
+
+        with db.connection() as conn:
+            max_id = conn.scalar(select(func.max(users.c.id)))
+            assert max_id == 2
+
+
+class TestReturning:
+    """Test conn.returning_one() and returning_many() methods."""
+
+    def test_returning_one_insert(self, db):
+        from sqlalchemy import insert
+
+        with db.transaction() as conn:
+            new_user = conn.returning_one(
+                query(
+                    User,
+                    insert(users)
+                    .values(id=20, name="Frank", email="frank@example.com")
+                    .returning(users),
+                )
+            )
+            assert isinstance(new_user, User)
+            assert new_user.id == 20
+            assert new_user.name == "Frank"
+
+    def test_returning_many_delete(self, db):
+        from sqlalchemy import delete
+
+        with db.transaction() as conn:
+            deleted = conn.returning_many(
+                query(User, delete(users).returning(users))
+            )
+            assert len(deleted) == 2
+            assert all(isinstance(u, User) for u in deleted)
+
+
+class TestExecuteMany:
+    """Test conn.execute_many() method for bulk inserts."""
+
+    def test_execute_many_bulk_insert(self, db):
+        from sqlalchemy import insert
+
+        with db.transaction() as conn:
+            conn.execute_many(
+                insert(users),
+                [
+                    {"id": 100, "name": "User1", "email": "user1@example.com"},
+                    {"id": 101, "name": "User2", "email": "user2@example.com"},
+                    {"id": 102, "name": "User3", "email": "user3@example.com"},
+                ],
+            )
+
+        # Verify all were inserted
+        with db.connection() as conn:
+            all_users = conn.any(query(User, select(users).where(users.c.id >= 100)))
+            assert len(all_users) == 3

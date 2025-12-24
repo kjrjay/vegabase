@@ -4,22 +4,35 @@ Core type definitions for the library.
 Provides TypedQuery[T] - the key abstraction binding SQL statements to Pydantic models.
 """
 
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, Union
 
 from pydantic import BaseModel
 from sqlalchemy import Select
+from sqlalchemy.sql.dml import ReturningDelete, ReturningInsert, ReturningUpdate
 
 # TypeVar bound to BaseModel for result type safety
 T = TypeVar("T", bound=BaseModel)
 
+# Statement types that return rows (SELECT or mutations with RETURNING)
+ReturningStatement = Union[
+    Select[Any],
+    ReturningInsert[Any],
+    ReturningUpdate[Any],
+    ReturningDelete[Any],
+]
+
 
 class TypedQuery(Generic[T]):
     """
-    Binds a SQLAlchemy Select statement to a Pydantic model type.
+    Binds a SQLAlchemy statement to a Pydantic model type.
 
     This is the core abstraction that enables type-safe queries:
     - Static typing: IDE knows the return type
     - Runtime validation: Pydantic validates each row
+
+    Works with:
+    - SELECT statements
+    - INSERT/UPDATE/DELETE with RETURNING clause
 
     Example:
         ```python
@@ -27,15 +40,17 @@ class TypedQuery(Generic[T]):
             id: int
             name: str
 
-        query = typed(User, select(users))
-        # query is TypedQuery[User]
-        # conn.one(query) returns User
+        # SELECT query
+        query = query(User, select(users))
+
+        # INSERT with RETURNING
+        query = query(User, insert(users).values(...).returning(users))
         ```
     """
 
     __slots__ = ("model", "statement")
 
-    def __init__(self, model: type[T], statement: Select[Any]):
+    def __init__(self, model: type[T], statement: ReturningStatement):
         self.model = model
         self.statement = statement
 
@@ -43,7 +58,7 @@ class TypedQuery(Generic[T]):
         return f"TypedQuery[{self.model.__name__}]({self.statement})"
 
 
-def query(model: type[T], statement: Select[Any]) -> TypedQuery[T]:
+def query(model: type[T], statement: ReturningStatement) -> TypedQuery[T]:
     """
     Create a TypedQuery binding a Pydantic model to a SQL statement.
 
@@ -51,18 +66,23 @@ def query(model: type[T], statement: Select[Any]) -> TypedQuery[T]:
 
     Example:
         ```python
+        # SELECT query
         def get_user(user_id: int) -> TypedQuery[User]:
             return query(User, select(users).where(users.c.id == user_id))
 
-        user = conn.one(get_user(42))  # IDE knows: user is User
+        # INSERT with RETURNING
+        def create_user(name: str) -> TypedQuery[User]:
+            return query(User, insert(users).values(name=name).returning(users))
+
+        user = conn.one(get_user(42))        # IDE knows: user is User
+        new_user = conn.one(create_user("Alice"))  # Also typed!
         ```
 
     Args:
         model: A Pydantic BaseModel subclass defining the row shape
-        statement: A SQLAlchemy Select statement
+        statement: A SQLAlchemy SELECT or mutation with RETURNING
 
     Returns:
         TypedQuery[T] that can be executed via Database connection methods
     """
     return TypedQuery(model, statement)
-

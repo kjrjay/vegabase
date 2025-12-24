@@ -63,6 +63,52 @@ pyreact_start.db provides explicit query methods:
 | `many(query)` | `List[T]` (1+) | `NotFoundError` (0 rows) |
 | `any(query)` | `List[T]` (0+) | Never (for count) |
 
+## Mutations
+
+### Execute (INSERT/UPDATE/DELETE)
+
+```python
+from sqlalchemy import insert, update, delete
+
+with db.transaction() as conn:
+    # INSERT/UPDATE/DELETE without RETURNING - returns row count
+    count = conn.execute(insert(users).values(name="Alice", email="alice@example.com"))
+    count = conn.execute(update(users).where(users.c.id == 1).values(name="Alice Updated"))
+    count = conn.execute(delete(users).where(users.c.id == 1))
+```
+
+### RETURNING Clause
+
+```python
+# INSERT/UPDATE/DELETE with RETURNING - returns typed model
+new_user = conn.returning_one(
+    query(User, insert(users).values(name="Alice").returning(users))
+)
+
+deleted_users = conn.returning_many(
+    query(User, delete(users).where(users.c.active == False).returning(users))
+)
+```
+
+### Scalar Queries
+
+```python
+from sqlalchemy import func
+
+# Aggregate queries returning single values
+count = conn.scalar(select(func.count()).select_from(users))
+max_id = conn.scalar(select(func.max(users.c.id)))
+```
+
+### Bulk Insert
+
+```python
+conn.execute_many(
+    insert(users),
+    [{"name": "Alice"}, {"name": "Bob"}, {"name": "Charlie"}]
+)
+```
+
 ## Async Support
 
 ```python
@@ -73,6 +119,10 @@ db = AsyncDatabase("sqlite+aiosqlite:///app.db")
 async with db.connection() as conn:
     user = await conn.one(get_user(42))
     users = await conn.any(query(User, select(users)))
+    
+    # All mutation methods are also available with await
+    await conn.execute(insert(users).values(name="Alice"))
+    new_user = await conn.returning_one(query(User, insert(...).returning(users)))
 ```
 
 ## Transactions
@@ -80,8 +130,8 @@ async with db.connection() as conn:
 ```python
 # Auto-commits on success, rolls back on exception
 with db.transaction() as conn:
-    conn.one(create_user("Alice"))
-    conn.one(create_user("Bob"))
+    conn.returning_one(query(User, insert(users).values(name="Alice").returning(users)))
+    conn.returning_one(query(User, insert(users).values(name="Bob").returning(users)))
     # Both committed together
 ```
 
@@ -91,7 +141,7 @@ For bulk operations where you trust the data:
 
 ```python
 # Bypass Pydantic validation (constructs without checking)
-users = conn.any(query, skip_validation=True)
+users = conn.any(get_all_users(), skip_validation=True)
 ```
 
 ## Philosophy

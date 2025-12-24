@@ -113,6 +113,129 @@ class AsyncTypedConnection:
         """
         return await self._execute(query, params, skip_validation)
 
+    async def execute(
+        self,
+        statement: Any,
+        params: dict[str, Any] | None = None,
+    ) -> int:
+        """
+        Execute a mutation statement (INSERT/UPDATE/DELETE) and return row count.
+
+        Use this for statements that don't return rows, or when you don't need
+        the returned data typed.
+
+        Returns:
+            Number of rows affected
+
+        Example:
+            ```python
+            count = await conn.execute(delete(users).where(users.c.id == 42))
+            count = await conn.execute(update(users).values(active=False))
+            ```
+        """
+        result = await self._conn.execute(statement, params or {})
+        return result.rowcount
+
+    async def scalar(
+        self,
+        statement: Any,
+        params: dict[str, Any] | None = None,
+    ) -> Any:
+        """
+        Execute a query and return a single scalar value.
+
+        Use for COUNT, SUM, MAX, or any query returning one value.
+
+        Returns:
+            The scalar value (int, str, etc.)
+
+        Raises:
+            NotFoundError: If no rows returned
+
+        Example:
+            ```python
+            count = await conn.scalar(select(func.count()).select_from(users))
+            max_id = await conn.scalar(select(func.max(users.c.id)))
+            ```
+        """
+        from .errors import NotFoundError
+        result = await self._conn.execute(statement, params or {})
+        row = result.fetchone()
+        if row is None:
+            raise NotFoundError("Expected a scalar value, got no rows")
+        return row[0]
+
+    async def returning_one(
+        self,
+        query: TypedQuery[T],
+        params: dict[str, Any] | None = None,
+        skip_validation: bool = False,
+    ) -> T:
+        """
+        Execute INSERT/UPDATE/DELETE with RETURNING clause and return one typed row.
+
+        Use for mutations that return the affected row(s) via RETURNING.
+        Requires database support (PostgreSQL, SQLite 3.35+).
+
+        Raises:
+            NotFoundError: If no rows returned
+            TooManyRowsError: If more than one row returned
+            ValidationError: If row fails Pydantic validation
+
+        Example:
+            ```python
+            new_user = await conn.returning_one(
+                query(User, insert(users).values(name="Alice").returning(users))
+            )
+            ```
+        """
+        return await self.one(query, params, skip_validation)
+
+    async def returning_many(
+        self,
+        query: TypedQuery[T],
+        params: dict[str, Any] | None = None,
+        skip_validation: bool = False,
+    ) -> list[T]:
+        """
+        Execute INSERT/UPDATE/DELETE with RETURNING clause and return typed rows.
+
+        Use for bulk mutations that return affected rows via RETURNING.
+        Requires database support (PostgreSQL, SQLite 3.35+).
+
+        Example:
+            ```python
+            deleted_users = await conn.returning_many(
+                query(User, delete(users).where(users.c.active == False).returning(users))
+            )
+            ```
+        """
+        return await self.any(query, params, skip_validation)
+
+    async def execute_many(
+        self,
+        statement: Any,
+        params_list: list[dict[str, Any]],
+    ) -> int:
+        """
+        Execute a statement multiple times with different parameters (bulk insert).
+
+        Efficient for inserting many rows at once.
+
+        Returns:
+            Total number of rows affected
+
+        Example:
+            ```python
+            await conn.execute_many(
+                insert(users),
+                [{"name": "Alice"}, {"name": "Bob"}, {"name": "Charlie"}]
+            )
+            ```
+        """
+        result = await self._conn.execute(statement, params_list)
+        return result.rowcount
+
     async def _execute(
         self, query: TypedQuery[T], params: dict[str, Any] | None, skip_validation: bool
     ) -> list[T]:

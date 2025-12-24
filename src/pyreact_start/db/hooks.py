@@ -12,7 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy import Select
+from .types import ReturningStatement
 
 
 @dataclass
@@ -23,8 +23,8 @@ class QueryContext:
     Hooks can read/modify this context to affect query execution.
     """
 
-    # The SQLAlchemy Select statement being executed
-    statement: Select[Any]
+    # The SQLAlchemy statement being executed (SELECT or mutation with RETURNING)
+    statement: ReturningStatement
 
     # The Pydantic model type for validation
     model_name: str
