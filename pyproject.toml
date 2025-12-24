@@ -1,6 +1,6 @@
 [project]
 name = "pyreact-start"
-version = "0.1.0"
+version = "0.2.0"
 description = "Full-stack React + Python with zero configuration. Build modern React apps with FastAPI, Bun, Inertia.js, and Tailwind CSS."
 readme = "README.md"
 license = "MIT"

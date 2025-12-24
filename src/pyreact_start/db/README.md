@@ -162,9 +162,9 @@ pyreact db apply
 pyreact db apply --yes
 ```
 
-**Convention:** The CLI looks for `db/schema.py` with:
+**Convention:** The CLI looks for `backend/db/schema.py` with:
 ```python
-# db/schema.py
+# backend/db/schema.py
 from sqlalchemy import MetaData, Table, Column, Integer, String
 
 DATABASE_URL = "sqlite:///app.db"  # or os.environ["DATABASE_URL"]
