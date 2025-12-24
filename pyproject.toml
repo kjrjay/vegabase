@@ -30,6 +30,7 @@ dev = ["ruff>=0.8.0", "ty>=0.0.1a6"]
 
 [project.scripts]
 pyreact = "pyreact_start.cli:main"
+pyreact-start = "pyreact_start.cli:main"  # For uvx bootstrap
 
 [project.urls]
 Homepage = "https://github.com/kjrjay/pyreact-start"
@@ -44,4 +45,5 @@ source-exclude = [
     "node_modules",
     "examples",
     ".github",
+    "test-*",
 ]

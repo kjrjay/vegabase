@@ -3,8 +3,78 @@ import sys
 import subprocess
 import shutil
 import importlib.util
+import tempfile
+import urllib.request
+import zipfile
+import json
 from pathlib import Path
 
+
+# GitHub repo for examples
+EXAMPLES_REPO = "jayakar/pyreact-start"
+EXAMPLES_BRANCH = "main"
+
+
+def download_example(example: str, target_dir: Path, project_name: str):
+    """
+    Download an example from GitHub and copy it to target_dir.
+    
+    Args:
+        example: Name of the example (e.g., 'posts')
+        target_dir: Directory to copy the example to
+        project_name: Name of the project for template substitution
+    """
+    print(f"📦 Downloading example '{example}' from GitHub...")
+    
+    # Download the repo as a zip
+    zip_url = f"https://github.com/{EXAMPLES_REPO}/archive/refs/heads/{EXAMPLES_BRANCH}.zip"
+    
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            zip_path = tmp_path / "repo.zip"
+            
+            # Download zip
+            urllib.request.urlretrieve(zip_url, zip_path)
+            
+            # Extract
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(tmp_path)
+            
+            # Find the example folder
+            # Zip extracts to: pyreact-start-main/examples/posts/
+            repo_name = EXAMPLES_REPO.split("/")[1]
+            example_src = tmp_path / f"{repo_name}-{EXAMPLES_BRANCH}" / "examples" / example
+            
+            if not example_src.exists():
+                print(f"❌ Example '{example}' not found in repository")
+                print(f"   Available examples: posts")
+                sys.exit(1)
+            
+            # Copy files to target, handling template substitution
+            for src_file in example_src.rglob("*"):
+                if src_file.is_file():
+                    rel_path = src_file.relative_to(example_src)
+                    dst_file = target_dir / rel_path
+                    
+                    # Create parent directories
+                    dst_file.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # Read and substitute templates
+                    content = src_file.read_text()
+                    content = content.replace("{{project_name}}", project_name)
+                    
+                    dst_file.write_text(content)
+            
+            print(f"✅ Downloaded example '{example}'")
+            
+    except urllib.error.URLError as e:
+        print(f"❌ Failed to download: {e}")
+        print("   Check your internet connection and try again.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        sys.exit(1)
 
 def init_project(project_name: str | None = None, with_db: bool = False):
     """
@@ -36,7 +106,9 @@ def init_project(project_name: str | None = None, with_db: bool = False):
 
     # Generate pyproject.toml
     db_deps = ""
+    db_core_dep = ""
     if with_db:
+        db_core_dep = '\n    "sqlalchemy>=2.0.0",'
         db_deps = """
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.0.0"]
@@ -50,7 +122,7 @@ requires-python = ">=3.11"
 dependencies = [
     "pyreact-start",
     "fastapi>=0.115.8",
-    "uvicorn>=0.34.0",
+    "uvicorn>=0.34.0",{db_core_dep}
 ]
 {db_deps}"""
 
@@ -394,16 +466,22 @@ def show_help():
     print("PyReact Start CLI")
     print("")
     print("Commands:")
-    print("  init [name]      Create a new PyReact project")
-    print("    --db           Include database schema scaffolding")
-    print("  dev              Start development server with hot reload")
-    print("  build            Build for production")
-    print("  ssr              Start the SSR server")
-    print("  db               Manage database schema")
+    print("  init [name]          Create a new PyReact project")
+    print("    --db               Include database schema scaffolding")
+    print("    --example <name>   Use an example template (e.g., posts)")
+    print("  dev                  Start development server with hot reload")
+    print("  build                Build for production")
+    print("  ssr                  Start the SSR server")
+    print("  db                   Manage database schema")
     print("")
     print("Database commands:")
-    print("  db plan          Show planned schema changes (dry run)")
-    print("  db apply         Apply schema changes to the database")
+    print("  db plan              Show planned schema changes (dry run)")
+    print("  db apply             Apply schema changes to the database")
+    print("")
+    print("Examples:")
+    print("  pyreact init my-app")
+    print("  pyreact init my-app --db")
+    print("  pyreact init my-app --example posts")
 
 
 def main():
@@ -423,14 +501,41 @@ def main():
         args = sys.argv[2:]
         project_name = None
         with_db = "--db" in args
+        example = None
         
-        # Find project name (first arg that doesn't start with --)
-        for arg in args:
-            if not arg.startswith("--"):
-                project_name = arg
-                break
+        # Parse --example value
+        for i, arg in enumerate(args):
+            if arg == "--example" and i + 1 < len(args):
+                example = args[i + 1]
+            elif not arg.startswith("--") and args[i-1] != "--example" if i > 0 else True:
+                if project_name is None:
+                    project_name = arg
         
-        init_project(project_name, with_db=with_db)
+        # If using an example, download it
+        if example:
+            if project_name is None:
+                project_name = example  # Use example name as project name
+            
+            target_dir = Path.cwd() / project_name
+            if target_dir.exists() and any(target_dir.iterdir()):
+                print(f"❌ Error: Directory '{project_name}' already exists and is not empty.")
+                sys.exit(1)
+            target_dir.mkdir(parents=True, exist_ok=True)
+            
+            print(f"🚀 Creating PyReact project '{project_name}' from example '{example}'...\n")
+            download_example(example, target_dir, project_name)
+            
+            print("")
+            print(f"✅ Created PyReact project '{project_name}'")
+            print("")
+            print("Next steps:")
+            print(f"  cd {project_name}")
+            print("  uv sync          # Install Python dependencies")
+            print("  bun install      # Install JS dependencies")
+            print("  pyreact db apply # Create database tables")
+            print("  pyreact dev      # Start development server")
+        else:
+            init_project(project_name, with_db=with_db)
         return
 
     # Handle db command in Python

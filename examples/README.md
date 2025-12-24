@@ -1,35 +1,33 @@
-# Examples
+# PyReact Start Examples
 
-This directory contains example applications built with PyReact Start.
+This directory contains example projects that can be used with `pyreact init --example`.
 
 ## Available Examples
 
 | Example | Description |
 |---------|-------------|
-| [basic-app](./basic-app/) | Minimal "Hello World" — single page, no database |
-| [tasks-app](./tasks-app/) | Full CRUD application with SQLite and Tailwind |
+| `posts` | CRUD posts app with database, routes, and React pages |
 
-## Running an Example
-
-Each example is a standalone project. To run one:
+## Usage
 
 ```bash
-cd examples/tasks-app
+# Create a new project with the posts example
+pyreact init my-app --example posts
 
-# Install dependencies
-pip install pyreact-start
+# Then set up and run
+cd my-app
+uv sync
 bun install
-
-# Start development
-pyreact dev           # Terminal 1: frontend + SSR
-python -m backend.main # Terminal 2: FastAPI backend
+pyreact db apply
+pyreact dev
 ```
 
-## Creating Your Own App
+## Creating New Examples
 
-Use `basic-app` as a starting template:
+Each example is a complete project with:
+- `pyproject.toml` - Python dependencies
+- `package.json` - JavaScript dependencies
+- `backend/` - FastAPI routes and database
+- `frontend/` - React pages
 
-```bash
-cp -r examples/basic-app my-new-app
-cd my-new-app
-```
+Use `{{project_name}}` in config files for template substitution.
