@@ -49,6 +49,7 @@ from .hooks import (
     QueryContext,
     SlowQueryHook,
 )
+from .schema import SchemaChange, apply, create_all, drop_all, plan
 from .types import T, TypedQuery, query
 
 __version__ = "0.1.0"
@@ -76,4 +77,10 @@ __all__ = [
     "LoggingHook",
     "CamelCaseHook",
     "SlowQueryHook",
+    # Schema management
+    "plan",
+    "apply",
+    "create_all",
+    "drop_all",
+    "SchemaChange",
 ]

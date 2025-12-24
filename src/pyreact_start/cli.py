@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import shutil
+import importlib.util
 from pathlib import Path
 
 
@@ -138,6 +139,157 @@ if __name__ == "__main__":
     print("  pyreact dev      # Start development server")
 
 
+def load_schema():
+    """
+    Load metadata and DATABASE_URL from db/schema.py by convention.
+    
+    Returns:
+        Tuple of (database_url, metadata)
+    """
+    schema_path = Path.cwd() / "db" / "schema.py"
+    
+    if not schema_path.exists():
+        print("❌ Error: db/schema.py not found")
+        print("")
+        print("Create db/schema.py with your database schema:")
+        print("")
+        print("  from sqlalchemy import MetaData, Table, Column, Integer, String")
+        print("")
+        print('  DATABASE_URL = "sqlite:///app.db"  # or from env')
+        print("  metadata = MetaData()")
+        print("  users = Table('users', metadata,")
+        print("      Column('id', Integer, primary_key=True),")
+        print("      Column('name', String(100)),")
+        print("  )")
+        sys.exit(1)
+    
+    # Add the current directory to sys.path so imports work
+    if str(Path.cwd()) not in sys.path:
+        sys.path.insert(0, str(Path.cwd()))
+    
+    # Import the schema module dynamically
+    spec = importlib.util.spec_from_file_location("db.schema", schema_path)
+    if spec is None or spec.loader is None:
+        print(f"❌ Error: Could not load db/schema.py")
+        sys.exit(1)
+    
+    schema = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(schema)
+    except Exception as e:
+        print(f"❌ Error loading db/schema.py: {e}")
+        sys.exit(1)
+    
+    # Check for required exports
+    if not hasattr(schema, "DATABASE_URL"):
+        print("❌ Error: db/schema.py must export DATABASE_URL")
+        sys.exit(1)
+    
+    if not hasattr(schema, "metadata"):
+        print("❌ Error: db/schema.py must export metadata (SQLAlchemy MetaData)")
+        sys.exit(1)
+    
+    return schema.DATABASE_URL, schema.metadata
+
+
+def db_plan():
+    """Show planned schema changes without applying them."""
+    from pyreact_start.db import Database, plan
+    
+    database_url, metadata = load_schema()
+    db = Database(database_url)
+    
+    print(f"🔍 Comparing schema to database...")
+    print(f"   Database: {database_url}")
+    print("")
+    
+    changes = plan(db.engine, metadata)
+    
+    if not changes:
+        print("✅ Schema is in sync - no changes needed")
+        return
+    
+    print(f"📋 {len(changes)} change(s) planned:\n")
+    for change in changes:
+        print(f"   • {change}")
+    
+    print("")
+    print("Run 'pyreact db apply' to apply these changes.")
+    
+    db.dispose()
+
+
+def db_apply(force: bool = False):
+    """Apply schema changes to the database."""
+    from pyreact_start.db import Database, plan, apply
+    
+    database_url, metadata = load_schema()
+    db = Database(database_url)
+    
+    print(f"🔍 Comparing schema to database...")
+    print(f"   Database: {database_url}")
+    print("")
+    
+    changes = plan(db.engine, metadata)
+    
+    if not changes:
+        print("✅ Schema is in sync - no changes needed")
+        db.dispose()
+        return
+    
+    print(f"📋 {len(changes)} change(s) to apply:\n")
+    for change in changes:
+        print(f"   • {change}")
+    print("")
+    
+    # Confirm unless --yes flag
+    if not force:
+        try:
+            response = input("Apply these changes? [y/N] ").strip().lower()
+            if response not in ("y", "yes"):
+                print("Cancelled.")
+                db.dispose()
+                return
+        except KeyboardInterrupt:
+            print("\nCancelled.")
+            db.dispose()
+            return
+    
+    # Apply changes
+    print("")
+    print("⚡ Applying changes...")
+    applied = apply(db.engine, metadata)
+    
+    print(f"✅ Applied {len(applied)} change(s)")
+    
+    db.dispose()
+
+
+def db_command(args: list[str]):
+    """Handle 'pyreact db' subcommands."""
+    if not args:
+        print("Usage: pyreact db <command>")
+        print("")
+        print("Commands:")
+        print("  plan    Show planned schema changes (dry run)")
+        print("  apply   Apply schema changes to the database")
+        print("")
+        print("Convention: Schema is loaded from db/schema.py")
+        return
+    
+    subcommand = args[0]
+    
+    if subcommand == "plan":
+        db_plan()
+    elif subcommand == "apply":
+        force = "--yes" in args or "-y" in args
+        db_apply(force=force)
+    else:
+        print(f"❌ Unknown db command: {subcommand}")
+        print("   Available: plan, apply")
+        sys.exit(1)
+
+
 def show_help():
     """Show CLI help."""
     print("PyReact Start CLI")
@@ -147,6 +299,11 @@ def show_help():
     print("  dev          Start development server with hot reload")
     print("  build        Build for production")
     print("  ssr          Start the SSR server")
+    print("  db           Manage database schema")
+    print("")
+    print("Database commands:")
+    print("  db plan      Show planned schema changes (dry run)")
+    print("  db apply     Apply schema changes to the database")
 
 
 def main():
@@ -164,6 +321,11 @@ def main():
     if command == "init":
         project_name = sys.argv[2] if len(sys.argv) > 2 else None
         init_project(project_name)
+        return
+
+    # Handle db command in Python
+    if command == "db":
+        db_command(sys.argv[2:])
         return
 
     if command in ("--help", "-h", "help"):
@@ -198,3 +360,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

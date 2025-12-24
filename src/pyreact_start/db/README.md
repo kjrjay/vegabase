@@ -144,6 +144,78 @@ For bulk operations where you trust the data:
 users = conn.any(get_all_users(), skip_validation=True)
 ```
 
+## Schema Management (No Migration Files!)
+
+pyreact_start.db uses a **plan/apply** pattern instead of migration files:
+
+### CLI Usage
+
+```bash
+# Create db/schema.py with your schema
+# Then preview changes:
+pyreact db plan
+
+# Apply changes to database:
+pyreact db apply
+
+# Skip confirmation (for CI/CD):
+pyreact db apply --yes
+```
+
+**Convention:** The CLI looks for `db/schema.py` with:
+```python
+# db/schema.py
+from sqlalchemy import MetaData, Table, Column, Integer, String
+
+DATABASE_URL = "sqlite:///app.db"  # or os.environ["DATABASE_URL"]
+metadata = MetaData()
+users = Table('users', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', String(100)),
+)
+```
+
+### Python API
+
+```python
+from pyreact_start.db import Database, plan, apply
+
+db = Database("postgresql://localhost/myapp")
+
+# Preview changes (dry run)
+changes = plan(db.engine, metadata)
+for change in changes:
+    print(change)
+# → create_table: users
+
+# Apply changes to database
+applied = apply(db.engine, metadata)
+print(f"Applied {len(applied)} changes")
+```
+
+### Why No Migration Files?
+
+| Aspect | Migration Files | plan/apply |
+|--------|-----------------|------------|
+| Merge conflicts | 💀 Constant pain | ✅ None |
+| Rollback | ⚠️ Rarely works | ❌ Use backups |
+| Simplicity | ❌ Complex | ✅ Simple |
+| Audit trail | ✅ Git history | ⚠️ DB logs only |
+
+### Safety Options
+
+```python
+# Default: only safe operations
+apply(db.engine, metadata)  # Creates tables, adds columns
+
+# Opt-in to dangerous operations
+apply(db.engine, metadata,
+    drop_columns=True,   # ⚠️ Data loss possible
+    drop_tables=True,    # ⚠️ Data loss possible
+    modify_columns=True, # ⚠️ May fail with data
+)
+```
+
 ## Philosophy
 
 This DB adapter differs from SQLModel/ORMs:
@@ -153,6 +225,7 @@ This DB adapter differs from SQLModel/ORMs:
 | Philosophy | One class = table + model | Tables and models are separate |
 | State | Connected objects tracked by Session | Disconnected data (just Pydantic) |
 | N+1 Problem | Possible (lazy loading) | Impossible (no magic) |
+| Migrations | Files or Alembic | plan/apply (no files) |
 
 ## License
 
