@@ -2,24 +2,11 @@
 
 import pathlib
 
-from fastapi import FastAPI, Request
+from fastapi import Request
 from fastapi.staticfiles import StaticFiles
-from pyreact_start import Inertia
-from pyreact_start.db import Database, apply
 
-from backend.db.schema import DATABASE_URL, metadata
+from backend.initial import app, inertia
 from backend.routes import posts
-
-app = FastAPI()
-
-# Initialize database
-db = Database(DATABASE_URL)
-
-# Auto-sync schema in development (remove in production)
-apply(db.engine, metadata)
-
-# Initialize Inertia
-inertia = Inertia(app)
 
 # Mount static files
 pathlib.Path("static/dist").mkdir(parents=True, exist_ok=True)

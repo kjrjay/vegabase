@@ -240,8 +240,8 @@ async function dev() {
       return new Response("Not Found", { status: 404, headers: corsHeaders });
     },
     websocket: {
-      message() {},
-      open(ws) {
+      message() { },
+      open(_ws) {
         console.log("Browser connected to Hot Reload");
       },
     },
@@ -249,7 +249,7 @@ async function dev() {
 
   console.log(`👀 Watcher & Asset Server running on http://localhost:${server.port}`);
 
-  const watcher = watch("./frontend", { recursive: true }, async (event, filename) => {
+  const _watcher = watch("./frontend", { recursive: true }, async (event, filename) => {
     if (filename) {
       await build();
       server.publish("reload", "reload");

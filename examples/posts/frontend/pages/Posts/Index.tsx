@@ -7,7 +7,8 @@ interface Post {
 }
 
 interface Flash {
-  success?: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  message: string;
 }
 
 interface PostsIndexProps {
@@ -35,9 +36,13 @@ export default function PostsIndex({ posts, flash }: PostsIndexProps) {
           </Link>
         </div>
 
-        {flash?.success && (
-          <div className="bg-green-100 text-green-800 px-4 py-3 rounded-lg mb-6">
-            {flash.success}
+        {flash && (
+          <div className={`px-4 py-3 rounded-lg mb-6 ${flash.type === 'success' ? 'bg-green-100 text-green-800' :
+              flash.type === 'error' ? 'bg-red-100 text-red-800' :
+                flash.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-blue-100 text-blue-800'
+            }`}>
+            {flash.message}
           </div>
         )}
 

@@ -1,12 +1,12 @@
 """Posts routes - CRUD operations."""
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from pyreact_start.db import query
 from sqlalchemy import delete, insert, select
 
 from backend.db.schema import posts
-from backend.main import db, inertia
+from backend.initial import db, inertia
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -34,16 +34,24 @@ async def create_post_form(request: Request):
     return await inertia.render("Posts/Create", {}, request)
 
 
+class PostCreate(BaseModel):
+    """Input model for creating a post."""
+
+    title: str
+    body: str
+
+
 @router.post("/create")
-async def create_post(request: Request, title: str = Form(...), body: str = Form(...)):
+async def create_post(request: Request, data: PostCreate):
     """Create a new post."""
     with db.transaction() as conn:
-        conn.execute(insert(posts).values(title=title, body=body))
+        conn.execute(insert(posts).values(title=data.title, body=data.body))
 
-    # Redirect to posts list
-    return await inertia.render(
-        "Posts/Index", {"posts": [], "flash": {"success": "Post created!"}}, request
-    )
+    # Set flash message and redirect
+    inertia.flash(request, "Post created successfully!", type="success")
+    from starlette.responses import RedirectResponse
+
+    return RedirectResponse(url="/posts", status_code=303)
 
 
 @router.post("/{post_id}/delete")
@@ -52,6 +60,8 @@ async def delete_post(request: Request, post_id: int):
     with db.transaction() as conn:
         conn.execute(delete(posts).where(posts.c.id == post_id))
 
-    return await inertia.render(
-        "Posts/Index", {"posts": [], "flash": {"success": "Post deleted!"}}, request
-    )
+    # Set flash message and redirect
+    inertia.flash(request, "Post deleted successfully!", type="success")
+    from starlette.responses import RedirectResponse
+
+    return RedirectResponse(url="/posts", status_code=303)

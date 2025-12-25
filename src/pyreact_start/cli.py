@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -403,6 +404,10 @@ def load_schema():
         print("❌ Error: Could not load backend/db/schema.py")
         sys.exit(1)
 
+    # Type assertions to help type checker understand the narrowing
+    assert spec is not None
+    assert spec.loader is not None
+
     schema = importlib.util.module_from_spec(spec)
     try:
         spec.loader.exec_module(schema)
@@ -630,8 +635,11 @@ def main():
         print("   This package may not be properly installed.")
         sys.exit(1)
 
+    # Type assertion to help type checker
+    assert bun_exec is not None
+
     # Run the TypeScript CLI directly with Bun
-    cmd = [bun_exec, "run", cli_script] + sys.argv[1:]
+    cmd: list[str] = [bun_exec, "run", cli_script] + sys.argv[1:]
 
     try:
         subprocess.run(cmd, check=True)

@@ -1,0 +1,13 @@
+# See https://pre-commit.com for more information
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: local
+    hooks:
+      # Quick check - library only (runs on every commit)
+      - id: check-lib
+        name: Check Library (Python + TypeScript)
+        entry: make check-lib
+        language: system
+        pass_filenames: false
+        always_run: true
