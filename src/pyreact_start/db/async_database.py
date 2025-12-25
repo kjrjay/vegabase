@@ -34,9 +34,7 @@ class AsyncTypedConnection:
 
     __slots__ = ("_conn", "_hooks")
 
-    def __init__(
-        self, conn: AsyncConnection, hooks: HookChain | None = None
-    ):
+    def __init__(self, conn: AsyncConnection, hooks: HookChain | None = None):
         self._conn = conn
         self._hooks = hooks or HookChain()
 
@@ -159,6 +157,7 @@ class AsyncTypedConnection:
             ```
         """
         from .errors import NotFoundError
+
         result = await self._conn.execute(statement, params or {})
         row = result.fetchone()
         if row is None:

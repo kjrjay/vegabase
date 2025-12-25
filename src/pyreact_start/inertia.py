@@ -1,13 +1,15 @@
-import os
 import json
+import os
+
 import httpx
 from fastapi import Request, Response
+
 
 class Inertia:
     def __init__(self, app, ssr_url: str = None):
         self.app = app
         self.is_dev = os.getenv("APP_ENV") == "development"
-        
+
         # Configure SSR URL
         if ssr_url:
             self.ssr_url = ssr_url
@@ -15,7 +17,7 @@ class Inertia:
             self.ssr_url = "http://localhost:3001/render"
         else:
             self.ssr_url = "http://localhost:13714/render"
-        
+
         # Configure asset paths based on environment
         self.assets_url = "http://localhost:3001" if self.is_dev else "/static/dist"
 
@@ -24,7 +26,7 @@ class Inertia:
             "component": component,
             "props": props,
             "url": str(request.url.path),
-            "version": "1.0" # TODO: Implement asset hashing
+            "version": "1.0",  # TODO: Implement asset hashing
         }
 
         # CASE A: Client is navigating (AJAX)
@@ -32,20 +34,20 @@ class Inertia:
             return Response(
                 content=json.dumps(page_data),
                 media_type="application/json",
-                headers={"X-Inertia": "true"}
+                headers={"X-Inertia": "true"},
             )
 
         # CASE B: First Load (Browser Refresh) -> SSR
         head = []
         body = ""
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(self.ssr_url, json=page_data)
                 try:
                     ssr_response = resp.json()
-                    head = ssr_response.get('head', [])
-                    body = ssr_response.get('body', '')
+                    head = ssr_response.get("head", [])
+                    body = ssr_response.get("body", "")
                 except json.JSONDecodeError:
                     # Log error but don't crash, fall back to CSR
                     print(f"SSR JSON Error: {resp.text}")
@@ -56,7 +58,7 @@ class Inertia:
 
         # Construct HTML
         head_html = "\n".join(head) if isinstance(head, list) else str(head)
-        
+
         # Determine asset URLs
         script_src = f"{self.assets_url}/client.js"
         css_src = f"{self.assets_url}/client.css"
@@ -78,4 +80,3 @@ class Inertia:
         </html>
         """
         return Response(content=html, media_type="text/html")
-

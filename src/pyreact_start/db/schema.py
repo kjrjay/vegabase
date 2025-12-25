@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import Column, MetaData, Table, inspect
+from sqlalchemy import Column, MetaData, inspect
 from sqlalchemy.engine import Engine
 
 
@@ -86,15 +86,15 @@ def _get_column_type_string(column: Any) -> str:
         return str(type(column.type).__name__)
 
 
-def _compare_columns(
-    target_col: Column[Any], existing_col: Any
-) -> list[str]:
+def _compare_columns(target_col: Column[Any], existing_col: Any) -> list[str]:
     """Compare a target column definition to an existing column."""
     differences = []
 
     # Check nullability
     target_nullable = target_col.nullable if target_col.nullable is not None else True
-    existing_nullable = existing_col.get("nullable", True) if hasattr(existing_col, "get") else True
+    existing_nullable = (
+        existing_col.get("nullable", True) if hasattr(existing_col, "get") else True
+    )
     if target_nullable != existing_nullable:
         differences.append(f"nullable: {existing_nullable} → {target_nullable}")
 
@@ -239,17 +239,24 @@ def apply(
                 table = metadata.tables[change.table_name]
                 table.create(conn, checkfirst=True)
                 applied.append(change)
-            elif change.change_type == ChangeType.ADD_COLUMN and add_columns:
-                should_apply = True
-            elif change.change_type == ChangeType.MODIFY_COLUMN and modify_columns:
-                should_apply = True
-            elif change.change_type == ChangeType.DROP_COLUMN and drop_columns:
-                should_apply = True
-            elif change.change_type == ChangeType.DROP_TABLE and drop_tables:
+            elif (
+                change.change_type == ChangeType.ADD_COLUMN
+                and add_columns
+                or change.change_type == ChangeType.MODIFY_COLUMN
+                and modify_columns
+                or change.change_type == ChangeType.DROP_COLUMN
+                and drop_columns
+                or change.change_type == ChangeType.DROP_TABLE
+                and drop_tables
+            ):
                 should_apply = True
 
             # Execute SQL for non-CREATE_TABLE changes
-            if should_apply and change.sql and change.change_type != ChangeType.CREATE_TABLE:
+            if (
+                should_apply
+                and change.sql
+                and change.change_type != ChangeType.CREATE_TABLE
+            ):
                 from sqlalchemy import text
 
                 conn.execute(text(change.sql))

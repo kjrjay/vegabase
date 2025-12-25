@@ -4,7 +4,7 @@ Core type definitions for the library.
 Provides TypedQuery[T] - the key abstraction binding SQL statements to Pydantic models.
 """
 
-from typing import Any, Generic, TypeVar, Union
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import Select
@@ -14,12 +14,9 @@ from sqlalchemy.sql.dml import ReturningDelete, ReturningInsert, ReturningUpdate
 T = TypeVar("T", bound=BaseModel)
 
 # Statement types that return rows (SELECT or mutations with RETURNING)
-ReturningStatement = Union[
-    Select[Any],
-    ReturningInsert[Any],
-    ReturningUpdate[Any],
-    ReturningDelete[Any],
-]
+ReturningStatement = (
+    Select[Any] | ReturningInsert[Any] | ReturningUpdate[Any] | ReturningDelete[Any]
+)
 
 
 class TypedQuery(Generic[T]):

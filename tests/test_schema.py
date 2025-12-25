@@ -3,10 +3,9 @@ Tests for schema management (plan/apply).
 """
 
 import pytest
-from pydantic import BaseModel
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
-from pyreact_start.db import Database, SchemaChange, apply, create_all, plan, query
+from pyreact_start.db import Database, SchemaChange, apply, create_all, plan
 from pyreact_start.db.schema import ChangeType
 
 
@@ -98,7 +97,7 @@ class TestApply:
     def test_apply_adds_column(self, empty_db):
         # Create table with only id and name
         initial_meta = MetaData()
-        users_initial = Table(
+        _users_initial = Table(
             "users",
             initial_meta,
             Column("id", Integer, primary_key=True),

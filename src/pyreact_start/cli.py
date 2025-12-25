@@ -1,14 +1,12 @@
-import os
-import sys
-import subprocess
-import shutil
 import importlib.util
+import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import urllib.request
 import zipfile
-import json
 from pathlib import Path
-
 
 # GitHub repo for examples
 EXAMPLES_REPO = "jayakar/pyreact-start"
@@ -18,56 +16,60 @@ EXAMPLES_BRANCH = "main"
 def download_example(example: str, target_dir: Path, project_name: str):
     """
     Download an example from GitHub and copy it to target_dir.
-    
+
     Args:
         example: Name of the example (e.g., 'posts')
         target_dir: Directory to copy the example to
         project_name: Name of the project for template substitution
     """
     print(f"📦 Downloading example '{example}' from GitHub...")
-    
+
     # Download the repo as a zip
-    zip_url = f"https://github.com/{EXAMPLES_REPO}/archive/refs/heads/{EXAMPLES_BRANCH}.zip"
-    
+    zip_url = (
+        f"https://github.com/{EXAMPLES_REPO}/archive/refs/heads/{EXAMPLES_BRANCH}.zip"
+    )
+
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
             zip_path = tmp_path / "repo.zip"
-            
+
             # Download zip
             urllib.request.urlretrieve(zip_url, zip_path)
-            
+
             # Extract
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall(tmp_path)
-            
+
             # Find the example folder
             # Zip extracts to: pyreact-start-main/examples/posts/
             repo_name = EXAMPLES_REPO.split("/")[1]
-            example_src = tmp_path / f"{repo_name}-{EXAMPLES_BRANCH}" / "examples" / example
-            
+            example_src = (
+                tmp_path / f"{repo_name}-{EXAMPLES_BRANCH}" / "examples" / example
+            )
+
             if not example_src.exists():
                 print(f"❌ Example '{example}' not found in repository")
-                print(f"   Available examples: posts")
+                print("   Available examples: posts")
                 sys.exit(1)
-            
+
             # Copy files to target, handling template substitution
             for src_file in example_src.rglob("*"):
                 if src_file.is_file():
                     rel_path = src_file.relative_to(example_src)
                     dst_file = target_dir / rel_path
-                    
+
                     # Create parent directories
                     dst_file.parent.mkdir(parents=True, exist_ok=True)
-                    
+
                     # Read and substitute templates
                     content = src_file.read_text()
                     content = content.replace("{{project_name}}", project_name)
-                    
+
                     dst_file.write_text(content)
-            
+
             print(f"✅ Downloaded example '{example}'")
-            
+
     except urllib.error.URLError as e:
         print(f"❌ Failed to download: {e}")
         print("   Check your internet connection and try again.")
@@ -76,10 +78,11 @@ def download_example(example: str, target_dir: Path, project_name: str):
         print(f"❌ Error: {e}")
         sys.exit(1)
 
+
 def init_project(project_name: str | None = None, with_db: bool = False):
     """
     Scaffold a new PyReact project.
-    
+
     Args:
         project_name: Name of the project (creates new directory if provided)
         with_db: If True, include database schema scaffolding
@@ -87,7 +90,9 @@ def init_project(project_name: str | None = None, with_db: bool = False):
     if project_name:
         target_dir = Path.cwd() / project_name
         if target_dir.exists() and any(target_dir.iterdir()):
-            print(f"❌ Error: Directory '{project_name}' already exists and is not empty.")
+            print(
+                f"❌ Error: Directory '{project_name}' already exists and is not empty."
+            )
             sys.exit(1)
         target_dir.mkdir(parents=True, exist_ok=True)
     else:
@@ -100,7 +105,7 @@ def init_project(project_name: str | None = None, with_db: bool = False):
     (target_dir / "backend").mkdir(exist_ok=True)
     (target_dir / "frontend" / "pages").mkdir(parents=True, exist_ok=True)
     (target_dir / "static").mkdir(exist_ok=True)
-    
+
     if with_db:
         (target_dir / "backend" / "db").mkdir(exist_ok=True)
 
@@ -113,7 +118,7 @@ def init_project(project_name: str | None = None, with_db: bool = False):
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.0.0"]
 """
-    
+
     pyproject_toml = f'''[project]
 name = "{project_name}"
 version = "0.1.0"
@@ -241,7 +246,7 @@ if __name__ == "__main__":
     styles_css = '@import "tailwindcss";\n'
 
     # Generate tsconfig.json for TypeScript
-    tsconfig_json = '''{
+    tsconfig_json = """{
     "compilerOptions": {
         "target": "ES2022",
         "module": "ESNext",
@@ -259,10 +264,10 @@ if __name__ == "__main__":
     "include": ["frontend/**/*"],
     "exclude": ["node_modules"]
 }
-'''
+"""
 
     # Generate frontend/pages/Home.tsx (TypeScript)
-    home_tsx = '''interface HomeProps {
+    home_tsx = """interface HomeProps {
     message: string;
 }
 
@@ -280,7 +285,7 @@ export default function Home({ message }: HomeProps) {
         </div>
     );
 }
-'''
+"""
 
     # Generate db/schema.py (if with_db enabled)
     db_schema = '''"""
@@ -328,7 +333,7 @@ users = Table(
     (target_dir / "backend" / "main.py").write_text(backend_main)
     (target_dir / "frontend" / "styles.css").write_text(styles_css)
     (target_dir / "frontend" / "pages" / "Home.tsx").write_text(home_tsx)
-    
+
     if with_db:
         (target_dir / "backend" / "db" / "__init__.py").write_text("")
         (target_dir / "backend" / "db" / "schema.py").write_text(db_schema)
@@ -367,12 +372,12 @@ users = Table(
 def load_schema():
     """
     Load metadata and DATABASE_URL from db/schema.py by convention.
-    
+
     Returns:
         Tuple of (database_url, metadata)
     """
     schema_path = Path.cwd() / "backend" / "db" / "schema.py"
-    
+
     if not schema_path.exists():
         print("❌ Error: backend/db/schema.py not found")
         print("")
@@ -387,86 +392,88 @@ def load_schema():
         print("      Column('name', String(100)),")
         print("  )")
         sys.exit(1)
-    
+
     # Add the current directory to sys.path so imports work
     if str(Path.cwd()) not in sys.path:
         sys.path.insert(0, str(Path.cwd()))
-    
+
     # Import the schema module dynamically
     spec = importlib.util.spec_from_file_location("backend.db.schema", schema_path)
     if spec is None or spec.loader is None:
         print("❌ Error: Could not load backend/db/schema.py")
         sys.exit(1)
-    
+
     schema = importlib.util.module_from_spec(spec)
     try:
         spec.loader.exec_module(schema)
     except Exception as e:
         print(f"❌ Error loading backend/db/schema.py: {e}")
         sys.exit(1)
-    
+
     # Check for required exports
     if not hasattr(schema, "DATABASE_URL"):
         print("❌ Error: backend/db/schema.py must export DATABASE_URL")
         sys.exit(1)
-    
+
     if not hasattr(schema, "metadata"):
-        print("❌ Error: backend/db/schema.py must export metadata (SQLAlchemy MetaData)")
+        print(
+            "❌ Error: backend/db/schema.py must export metadata (SQLAlchemy MetaData)"
+        )
         sys.exit(1)
-    
+
     return schema.DATABASE_URL, schema.metadata
 
 
 def db_plan():
     """Show planned schema changes without applying them."""
     from pyreact_start.db import Database, plan
-    
+
     database_url, metadata = load_schema()
     db = Database(database_url)
-    
-    print(f"🔍 Comparing schema to database...")
+
+    print("🔍 Comparing schema to database...")
     print(f"   Database: {database_url}")
     print("")
-    
+
     changes = plan(db.engine, metadata)
-    
+
     if not changes:
         print("✅ Schema is in sync - no changes needed")
         return
-    
+
     print(f"📋 {len(changes)} change(s) planned:\n")
     for change in changes:
         print(f"   • {change}")
-    
+
     print("")
     print("Run 'pyreact db apply' to apply these changes.")
-    
+
     db.dispose()
 
 
 def db_apply(force: bool = False):
     """Apply schema changes to the database."""
-    from pyreact_start.db import Database, plan, apply
-    
+    from pyreact_start.db import Database, apply, plan
+
     database_url, metadata = load_schema()
     db = Database(database_url)
-    
-    print(f"🔍 Comparing schema to database...")
+
+    print("🔍 Comparing schema to database...")
     print(f"   Database: {database_url}")
     print("")
-    
+
     changes = plan(db.engine, metadata)
-    
+
     if not changes:
         print("✅ Schema is in sync - no changes needed")
         db.dispose()
         return
-    
+
     print(f"📋 {len(changes)} change(s) to apply:\n")
     for change in changes:
         print(f"   • {change}")
     print("")
-    
+
     # Confirm unless --yes flag
     if not force:
         try:
@@ -479,14 +486,14 @@ def db_apply(force: bool = False):
             print("\nCancelled.")
             db.dispose()
             return
-    
+
     # Apply changes
     print("")
     print("⚡ Applying changes...")
     applied = apply(db.engine, metadata)
-    
+
     print(f"✅ Applied {len(applied)} change(s)")
-    
+
     db.dispose()
 
 
@@ -501,9 +508,9 @@ def db_command(args: list[str]):
         print("")
         print("Convention: Schema is loaded from db/schema.py")
         return
-    
+
     subcommand = args[0]
-    
+
     if subcommand == "plan":
         db_plan()
     elif subcommand == "apply":
@@ -556,29 +563,36 @@ def main():
         project_name = None
         with_db = "--db" in args
         example = None
-        
+
         # Parse --example value
         for i, arg in enumerate(args):
             if arg == "--example" and i + 1 < len(args):
                 example = args[i + 1]
-            elif not arg.startswith("--") and args[i-1] != "--example" if i > 0 else True:
-                if project_name is None:
-                    project_name = arg
-        
+            elif (
+                not arg.startswith("--")
+                and (i == 0 or args[i - 1] != "--example")
+                and project_name is None
+            ):
+                project_name = arg
+
         # If using an example, download it
         if example:
             if project_name is None:
                 project_name = example  # Use example name as project name
-            
+
             target_dir = Path.cwd() / project_name
             if target_dir.exists() and any(target_dir.iterdir()):
-                print(f"❌ Error: Directory '{project_name}' already exists and is not empty.")
+                print(
+                    f"❌ Error: Directory '{project_name}' already exists and is not empty."
+                )
                 sys.exit(1)
             target_dir.mkdir(parents=True, exist_ok=True)
-            
-            print(f"🚀 Creating PyReact project '{project_name}' from example '{example}'...\n")
+
+            print(
+                f"🚀 Creating PyReact project '{project_name}' from example '{example}'...\n"
+            )
             download_example(example, target_dir, project_name)
-            
+
             print("")
             print(f"✅ Created PyReact project '{project_name}'")
             print("")
@@ -603,7 +617,7 @@ def main():
 
     # Delegate to TypeScript CLI for dev, build, ssr commands
     package_dir = os.path.dirname(os.path.abspath(__file__))
-    cli_script = os.path.join(package_dir, "js", "src", "cli.ts")
+    cli_script = os.path.join(package_dir, "ts", "src", "cli.ts")
 
     bun_exec = shutil.which("bun")
     if not bun_exec:
@@ -629,4 +643,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

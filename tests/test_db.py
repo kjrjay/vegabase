@@ -92,16 +92,14 @@ class TestOne:
     def test_one_raises_not_found_on_zero_rows(self, db):
         q = query(User, select(users).where(users.c.id == 999))
 
-        with db.connection() as conn:
-            with pytest.raises(NotFoundError):
-                conn.one(q)
+        with db.connection() as conn, pytest.raises(NotFoundError):
+            conn.one(q)
 
     def test_one_raises_too_many_on_multiple_rows(self, db):
         q = query(User, select(users))  # Returns 2 rows
 
-        with db.connection() as conn:
-            with pytest.raises(TooManyRowsError):
-                conn.one(q)
+        with db.connection() as conn, pytest.raises(TooManyRowsError):
+            conn.one(q)
 
 
 class TestMaybeOne:
@@ -125,9 +123,8 @@ class TestMaybeOne:
     def test_maybe_one_raises_too_many_on_multiple_rows(self, db):
         q = query(User, select(users))
 
-        with db.connection() as conn:
-            with pytest.raises(TooManyRowsError):
-                conn.maybe_one(q)
+        with db.connection() as conn, pytest.raises(TooManyRowsError):
+            conn.maybe_one(q)
 
 
 class TestMany:
@@ -144,9 +141,8 @@ class TestMany:
     def test_many_raises_not_found_on_zero_rows(self, db):
         q = query(User, select(users).where(users.c.id == 999))
 
-        with db.connection() as conn:
-            with pytest.raises(NotFoundError):
-                conn.many(q)
+        with db.connection() as conn, pytest.raises(NotFoundError):
+            conn.many(q)
 
 
 class TestAny:
@@ -172,9 +168,7 @@ class TestValidation:
 
     def test_validation_catches_missing_field(self, db):
         # Try to map to UserSummary but database has extra field - this should work
-        q = query(
-            UserSummary, select(users.c.id, users.c.name).where(users.c.id == 1)
-        )
+        q = query(UserSummary, select(users.c.id, users.c.name).where(users.c.id == 1))
 
         with db.connection() as conn:
             user = conn.one(q)
@@ -297,9 +291,7 @@ class TestReturning:
         from sqlalchemy import delete
 
         with db.transaction() as conn:
-            deleted = conn.returning_many(
-                query(User, delete(users).returning(users))
-            )
+            deleted = conn.returning_many(query(User, delete(users).returning(users)))
             assert len(deleted) == 2
             assert all(isinstance(u, User) for u in deleted)
 

@@ -46,4 +46,18 @@ source-exclude = [
     "examples",
     ".github",
     "test-*",
+    "**/bun.lock",
+    "**/package.json",
+    "**/tsconfig.json",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]

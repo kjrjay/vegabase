@@ -97,9 +97,8 @@ class TestHookHooks:
         bad_table = Table("nonexistent", metadata, Column("id", Integer))
         q = query(User, select(bad_table))
 
-        with db.connection() as conn:
-            with pytest.raises(Exception):  # noqa: B017
-                conn.any(q)
+        with db.connection() as conn, pytest.raises(Exception):  # noqa: B017
+            conn.any(q)
 
         assert len(calls) == 1
         assert calls[0][0] == "error"
