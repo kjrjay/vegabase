@@ -104,7 +104,7 @@ def init_project(project_name: str | None = None, with_db: bool = False):
     if with_db:
         (target_dir / "backend" / "db").mkdir(exist_ok=True)
 
-    # Generate pyproject.toml
+    # Generate pyproject.toml with opinionated defaults
     db_deps = ""
     db_core_dep = ""
     if with_db:
@@ -114,7 +114,7 @@ def init_project(project_name: str | None = None, with_db: bool = False):
 postgres = ["psycopg[binary]>=3.0.0"]
 """
     
-    pyproject_toml = f"""[project]
+    pyproject_toml = f'''[project]
 name = "{project_name}"
 version = "0.1.0"
 description = "A PyReact Start app"
@@ -122,15 +122,34 @@ requires-python = ">=3.11"
 dependencies = [
     "pyreact-start",
     "fastapi>=0.115.8",
-    "uvicorn>=0.34.0",{db_core_dep}
+    "uvicorn[standard]>=0.34.0",{db_core_dep}
 ]
-{db_deps}"""
+{db_deps}
+[dependency-groups]
+dev = ["ruff>=0.8.0", "ty>=0.0.1a6"]
 
-    # Generate package.json
-    package_json = f"""{{
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+'''
+
+    # Generate package.json with TypeScript and oxlint
+    package_json = f'''{{
     "name": "{project_name}",
     "type": "module",
     "private": true,
+    "scripts": {{
+        "lint": "oxlint .",
+        "format": "oxlint --fix .",
+        "typecheck": "tsc --noEmit"
+    }},
     "dependencies": {{
         "@inertiajs/react": "^2.2.18",
         "react": "^19.2.0",
@@ -138,25 +157,30 @@ dependencies = [
     }},
     "devDependencies": {{
         "@types/bun": "latest",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
         "bun-plugin-tailwind": "^0.1.2",
-        "tailwindcss": "^4.1.17"
+        "oxlint": "latest",
+        "tailwindcss": "^4.1.17",
+        "typescript": "^5.7.0"
     }}
 }}
-"""
+'''
 
     # Generate backend/__init__.py
     backend_init = ""
 
-    # Generate backend/main.py (with db import if enabled)
     if with_db:
         backend_main = f'''"""{project_name} - PyReact Start backend."""
+
+import pathlib
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from pyreact_start import Inertia
 from pyreact_start.db import Database, apply
+
 from backend.db.schema import DATABASE_URL, metadata
-import pathlib
 
 app = FastAPI()
 
@@ -181,15 +205,17 @@ async def home(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
 '''
     else:
         backend_main = f'''"""{project_name} - PyReact Start backend."""
 
+import pathlib
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from pyreact_start import Inertia
-import pathlib
 
 app = FastAPI()
 
@@ -214,8 +240,33 @@ if __name__ == "__main__":
     # Generate frontend/styles.css
     styles_css = '@import "tailwindcss";\n'
 
-    # Generate frontend/pages/Home.jsx
-    home_jsx = '''export default function Home({ message }) {
+    # Generate tsconfig.json for TypeScript
+    tsconfig_json = '''{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "strict": true,
+        "noEmit": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true
+    },
+    "include": ["frontend/**/*"],
+    "exclude": ["node_modules"]
+}
+'''
+
+    # Generate frontend/pages/Home.tsx (TypeScript)
+    home_tsx = '''interface HomeProps {
+    message: string;
+}
+
+export default function Home({ message }: HomeProps) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-12 shadow-2xl text-center">
@@ -240,7 +291,8 @@ Run `pyreact db plan` to preview changes and `pyreact db apply` to apply them.
 """
 
 import os
-from sqlalchemy import MetaData, Table, Column, Integer, String, Boolean, DateTime, func
+
+from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, func
 
 # Database connection URL (use environment variable in production)
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///app.db")
@@ -271,10 +323,11 @@ users = Table(
     # Write all files
     (target_dir / "pyproject.toml").write_text(pyproject_toml)
     (target_dir / "package.json").write_text(package_json)
+    (target_dir / "tsconfig.json").write_text(tsconfig_json)
     (target_dir / "backend" / "__init__.py").write_text(backend_init)
     (target_dir / "backend" / "main.py").write_text(backend_main)
     (target_dir / "frontend" / "styles.css").write_text(styles_css)
-    (target_dir / "frontend" / "pages" / "Home.jsx").write_text(home_jsx)
+    (target_dir / "frontend" / "pages" / "Home.tsx").write_text(home_tsx)
     
     if with_db:
         (target_dir / "backend" / "db" / "__init__.py").write_text("")
@@ -290,11 +343,12 @@ users = Table(
         print("   │   └── schema.py")
     print("   frontend/")
     print("   ├── pages/")
-    print("   │   └── Home.jsx")
+    print("   │   └── Home.tsx")
     print("   └── styles.css")
     print("   static/")
     print("   package.json")
     print("   pyproject.toml")
+    print("   tsconfig.json")
     print("")
     print(f"✅ Created PyReact project '{project_name}'")
     if with_db:

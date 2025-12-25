@@ -2,6 +2,11 @@
     "name": "{{project_name}}",
     "type": "module",
     "private": true,
+    "scripts": {
+        "lint": "oxlint .",
+        "format": "oxlint --fix .",
+        "typecheck": "tsc --noEmit"
+    },
     "dependencies": {
         "@inertiajs/react": "^2.2.18",
         "react": "^19.2.0",
@@ -9,7 +14,11 @@
     },
     "devDependencies": {
         "@types/bun": "latest",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
         "bun-plugin-tailwind": "^0.1.2",
-        "tailwindcss": "^4.1.17"
+        "oxlint": "latest",
+        "tailwindcss": "^4.1.17",
+        "typescript": "^5.7.0"
     }
 }

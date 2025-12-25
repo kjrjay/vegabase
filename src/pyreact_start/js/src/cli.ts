@@ -11,7 +11,7 @@ const pyreactDir = path.join(projectDir, ".pyreact");
  * Scan frontend/pages and generate the page map
  */
 async function generatePageMap(): Promise<string> {
-    const glob = new Glob("**/*.jsx");
+    const glob = new Glob("**/*.{jsx,tsx}");
     const pagesDir = path.join(projectDir, "frontend/pages");
     const pages: string[] = [];
 
@@ -20,7 +20,7 @@ async function generatePageMap(): Promise<string> {
     }
 
     const imports = pages.map(file => {
-        const name = file.replace('.jsx', '');
+        const name = file.replace(/\.(jsx|tsx)$/, '');
         const absPath = `${projectDir}/frontend/pages/${file}`;
         return `"${name}": () => import("${absPath}")`;
     }).join(",\n  ");

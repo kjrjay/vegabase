@@ -1,6 +1,10 @@
 import { Link } from '@inertiajs/react';
 
-export default function Home({ message }) {
+interface HomeProps {
+    message: string;
+}
+
+export default function Home({ message }: HomeProps) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-12 shadow-2xl text-center">

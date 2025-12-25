@@ -1,4 +1,5 @@
 import { Link, useForm } from '@inertiajs/react';
+import { FormEvent } from 'react';
 
 export default function PostsCreate() {
     const { data, setData, post, processing, errors } = useForm({
@@ -6,7 +7,7 @@ export default function PostsCreate() {
         body: '',
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         post('/posts/create');
     };

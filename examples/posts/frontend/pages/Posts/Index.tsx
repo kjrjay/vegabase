@@ -1,7 +1,22 @@
 import { Link, router } from '@inertiajs/react';
 
-export default function PostsIndex({ posts, flash }) {
-    const handleDelete = (postId) => {
+interface Post {
+    id: number;
+    title: string;
+    body: string;
+}
+
+interface Flash {
+    success?: string;
+}
+
+interface PostsIndexProps {
+    posts: Post[];
+    flash?: Flash;
+}
+
+export default function PostsIndex({ posts, flash }: PostsIndexProps) {
+    const handleDelete = (postId: number) => {
         if (confirm('Are you sure?')) {
             router.post(`/posts/${postId}/delete`);
         }
