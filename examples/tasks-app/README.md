@@ -3,12 +3,15 @@
 ## Development
 
 ### Prerequisites
+
 - [Bun](https://bun.sh) (v1.0+)
 - Python 3.10+
 - `pip` dependencies installed (`fastapi`, `uvicorn`, `requests`)
 
 ### Setup
+
 1. Install frontend dependencies:
+
    ```bash
    bun install
    cd frontend && bun install
@@ -20,10 +23,12 @@
    ```
 
 ### Running in Development Mode
+
 You need two terminal windows:
 
 **Terminal 1: Asset Server & Bundler & SSR**
 Runs the Bun dev server (port 3001) which handles:
+
 - Hot reloading
 - On-the-fly bundling of React components
 - Tailwind CSS processing
@@ -36,6 +41,7 @@ bun run dev
 
 **Terminal 2: FastAPI Backend**
 Runs the Python server (port 8000) which handles:
+
 - API endpoints
 - SSR requests to the Bun dev server
 - Serving the HTML shell
@@ -53,6 +59,7 @@ Access the app at `http://localhost:8000`
 ## Production
 
 ### Building
+
 1. Build the client and SSR bundles:
    ```bash
    bun run build
@@ -64,7 +71,9 @@ Access the app at `http://localhost:8000`
    - `frontend/pages_map.js` (Generated page map)
 
 ### Running in Production
+
 1. Start the SSR Server:
+
    ```bash
    nohup bun run start:ssr > ssr.log 2>&1 &
    ```
@@ -77,6 +86,7 @@ Access the app at `http://localhost:8000`
    ```
 
 ## Deployment Artifacts
+
 To deploy to production, you only need these files/folders:
 
 1. **Backend Code**: `backend/main.py`
@@ -87,6 +97,7 @@ To deploy to production, you only need these files/folders:
 You do **not** need `node_modules`, `frontend/`, `lib/`, or source TypeScript files in the production environment.
 
 ## Project Structure
+
 - `backend/`: FastAPI application and generated SSR bundle
 - `frontend/`: React source code
   - `pages/`: Inertia pages (auto-discovered)

@@ -1,8 +1,10 @@
 """Minimal PyReact Start backend."""
 
-import os
+import pathlib
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+
 from pyreact_start import Inertia
 
 app = FastAPI()
@@ -11,7 +13,6 @@ app = FastAPI()
 inertia = Inertia(app)
 
 # Mount static files (create static dir if it doesn't exist)
-import pathlib
 pathlib.Path("static/dist").mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -23,4 +24,5 @@ async def home(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -3,7 +3,8 @@ Database schema for posts example.
 """
 
 import os
-from sqlalchemy import MetaData, Table, Column, Integer, String, Text, DateTime, func
+
+from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text, func
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///app.db")
 
