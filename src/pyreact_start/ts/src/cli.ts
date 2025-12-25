@@ -46,7 +46,7 @@ async function generateEntryFiles() {
   const clientEntry = `
 import '../frontend/styles.css';
 import { createInertiaApp } from '@inertiajs/react';
-import { hydrateRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import pageMap from './pages.js';
 
 // Hot Reload Logic for Development
@@ -67,7 +67,13 @@ createInertiaApp({
         return importPage();
     },
     setup({ el, App, props }) {
-        hydrateRoot(el, <App {...props} />);
+        // Use createRoot for client mode, hydrateRoot for SSR/cached modes
+        const mode = props.initialPage.mode;
+        if (mode === "client") {
+            createRoot(el).render(<App {...props} />);
+        } else {
+            hydrateRoot(el, <App {...props} />);
+        }
     },
 });
 `;

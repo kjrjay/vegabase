@@ -1,3 +1,3 @@
-from .inertia import Inertia
+from .inertia import Inertia, RenderMode
 
-__all__ = ["Inertia"]
+__all__ = ["Inertia", "RenderMode"]
