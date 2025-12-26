@@ -23,7 +23,7 @@ class Post(BaseModel):
 async def list_posts(request: Request):
     """List all posts."""
     with db.connection() as conn:
-        all_posts = conn.any(query(Post, select(posts)))
+        all_posts = conn.all(query(Post, select(posts)))
 
     return await inertia.render("Posts/Index", {"posts": all_posts}, request)
 

@@ -41,13 +41,8 @@ async def get_current_user(request: Request):
     if user_id:
         user = await db.get_user_by_id(user_id)
         if user:
-            # Don't send password hash to client
-            return {
-                "id": user["id"],
-                "username": user["username"],
-                "name": user["name"],
-                "avatar_url": user.get("avatar_url"),
-            }
+            # Use helper to convert to public dict (no password hash)
+            return db.user_to_public(user)
     return None
 
 
@@ -81,7 +76,7 @@ async def login(request: Request):
 
     user = await db.verify_password(username, password)
     if user:
-        request.session["user_id"] = user["id"]
+        request.session["user_id"] = user.id
         return Response(status_code=303, headers={"Location": "/"})
     else:
         # In production, use Inertia's error handling

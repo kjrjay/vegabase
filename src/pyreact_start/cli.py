@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 
 # GitHub repo for examples
-EXAMPLES_REPO = "jayakar/pyreact-start"
+EXAMPLES_REPO = "kjrjay/pyreact-start"
 EXAMPLES_BRANCH = "main"
 
 
