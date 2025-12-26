@@ -146,20 +146,20 @@ class TestMany:
 
 
 class TestAny:
-    """Test conn.any() method."""
+    """Test conn.all() method."""
 
     def test_any_returns_multiple_rows(self, db):
         q = query(User, select(users))
 
         with db.connection() as conn:
-            users_list = conn.any(q)
+            users_list = conn.all(q)
             assert len(users_list) == 2
 
     def test_any_returns_empty_list_on_zero_rows(self, db):
         q = query(User, select(users).where(users.c.id == 999))
 
         with db.connection() as conn:
-            users_list = conn.any(q)
+            users_list = conn.all(q)
             assert users_list == []
 
 
@@ -314,5 +314,5 @@ class TestExecuteMany:
 
         # Verify all were inserted
         with db.connection() as conn:
-            all_users = conn.any(query(User, select(users).where(users.c.id >= 100)))
+            all_users = conn.all(query(User, select(users).where(users.c.id >= 100)))
             assert len(all_users) == 3

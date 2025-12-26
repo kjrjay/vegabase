@@ -79,7 +79,7 @@ class TestHookHooks:
 
         q = query(User, select(users))
         with db.connection() as conn:
-            conn.any(q)
+            conn.all(q)
 
         assert calls == [("before", "User"), ("after", 1)]
 
@@ -98,7 +98,7 @@ class TestHookHooks:
         q = query(User, select(bad_table))
 
         with db.connection() as conn, pytest.raises(Exception):  # noqa: B017
-            conn.any(q)
+            conn.all(q)
 
         assert len(calls) == 1
         assert calls[0][0] == "error"
@@ -114,7 +114,7 @@ class TestLoggingHook:
 
         q = query(User, select(users))
         with db.connection() as conn:
-            conn.any(q)
+            conn.all(q)
 
         assert len(logs) == 1
         assert "[TEST]" in logs[0]
@@ -177,6 +177,6 @@ class TestHookChaining:
 
         q = query(User, select(users))
         with db.connection() as conn:
-            conn.any(q)
+            conn.all(q)
 
         assert order == ["first_before", "second_before", "first_after", "second_after"]

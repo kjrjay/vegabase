@@ -88,13 +88,13 @@ class TestAsyncOne:
 
 @pytest.mark.asyncio
 class TestAsyncAny:
-    """Test async conn.any() method."""
+    """Test async conn.all() method."""
 
     async def test_any_returns_multiple_rows(self, async_db):
         q = query(User, select(users))
 
         async with async_db.connection() as conn:
-            users_list = await conn.any(q)
+            users_list = await conn.all(q)
             assert len(users_list) == 2
             assert all(isinstance(u, User) for u in users_list)
 
@@ -102,7 +102,7 @@ class TestAsyncAny:
         q = query(User, select(users).where(users.c.id == 999))
 
         async with async_db.connection() as conn:
-            users_list = await conn.any(q)
+            users_list = await conn.all(q)
             assert users_list == []
 
 

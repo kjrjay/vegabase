@@ -2,9 +2,11 @@
 Tests for Inertia rendering modes and caching.
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from pyreact_start.inertia import Inertia, LRUCache, RenderMode
+
+from pyreact_start.inertia import Inertia, LRUCache
 
 
 class TestLRUCache:

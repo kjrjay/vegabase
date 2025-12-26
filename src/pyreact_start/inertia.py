@@ -9,7 +9,6 @@ from uuid import UUID
 import httpx
 from fastapi import Request, Response
 
-
 # Render mode type
 RenderMode = Literal["ssr", "client", "cached", "static"]
 
@@ -327,4 +326,3 @@ class Inertia:
             body = f"<div id='app' data-page='{_serialize(page_data)}'></div>"
 
         return head, body
-

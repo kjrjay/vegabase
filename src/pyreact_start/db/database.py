@@ -28,7 +28,7 @@ class TypedConnection:
     - `one()`: Exactly one row (raises if 0 or >1)
     - `maybe_one()`: Zero or one row (raises if >1)
     - `many()`: One or more rows (raises if 0)
-    - `any()`: Zero or more rows (never raises for count)
+    - `all()`: Zero or more rows (never raises for count)
 
     All methods support:
     - `params`: Optional dict for bindparam queries
@@ -98,7 +98,7 @@ class TypedConnection:
             raise NotFoundError("Expected at least 1 row, got 0")
         return rows
 
-    def any(
+    def all(
         self,
         query: TypedQuery[T],
         params: dict[str, Any] | None = None,
@@ -210,7 +210,7 @@ class TypedConnection:
             )
             ```
         """
-        return self.any(query, params, skip_validation)
+        return self.all(query, params, skip_validation)
 
     def execute_many(
         self,

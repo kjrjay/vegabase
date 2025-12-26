@@ -61,7 +61,7 @@ pyreact_start.db provides explicit query methods:
 | `one(query)` | Single `T` | `NotFoundError` (0 rows), `TooManyRowsError` (>1) |
 | `maybe_one(query)` | `T \| None` | `TooManyRowsError` (>1) |
 | `many(query)` | `List[T]` (1+) | `NotFoundError` (0 rows) |
-| `any(query)` | `List[T]` (0+) | Never (for count) |
+| `all(query)` | `List[T]` (0+) | Never (for count) |
 
 ## Mutations
 
@@ -118,7 +118,7 @@ db = AsyncDatabase("sqlite+aiosqlite:///app.db")
 
 async with db.connection() as conn:
     user = await conn.one(get_user(42))
-    users = await conn.any(query(User, select(users)))
+    users = await conn.all(query(User, select(users)))
     
     # All mutation methods are also available with await
     await conn.execute(insert(users).values(name="Alice"))
@@ -141,7 +141,7 @@ For bulk operations where you trust the data:
 
 ```python
 # Bypass Pydantic validation (constructs without checking)
-users = conn.any(get_all_users(), skip_validation=True)
+users = conn.all(get_all_users(), skip_validation=True)
 ```
 
 ## Schema Management (No Migration Files!)
