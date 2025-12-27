@@ -10,19 +10,19 @@ lint-py:
 	ruff check src/ --fix
 
 typecheck-py:
-	ty check src/pyreact_start/
+	ty check src/vegabase/
 
 # =============================================
 # TypeScript - Library
 # =============================================
 format-ts:
-	cd src/pyreact_start/ts && bun run format
+	cd src/vegabase/ts && bun run format
 
 lint-ts:
-	cd src/pyreact_start/ts && bun run lint
+	cd src/vegabase/ts && bun run lint
 
 typecheck-ts:
-	cd src/pyreact_start/ts && bun run typecheck
+	cd src/vegabase/ts && bun run typecheck
 
 # =============================================
 # Combined Targets

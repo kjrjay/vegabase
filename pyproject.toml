@@ -1,6 +1,6 @@
 [project]
-name = "pyreact-start"
-version = "0.2.0"
+name = "vegabase"
+version = "0.1.0"
 description = "Full-stack React + Python with zero configuration. Build modern React apps with FastAPI, Bun, Inertia.js, and Tailwind CSS."
 readme = "README.md"
 license = "MIT"
@@ -31,12 +31,11 @@ test = ["pytest>=8.0.0", "pytest-asyncio>=0.24.0", "aiosqlite>=0.20.0", "greenle
 dev = ["ruff>=0.8.0", "ty>=0.0.1a6"]
 
 [project.scripts]
-pyreact = "pyreact_start.cli:main"
-pyreact-start = "pyreact_start.cli:main"  # For uvx bootstrap
+vegabase = "vegabase.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/kjrjay/pyreact-start"
-Repository = "https://github.com/kjrjay/pyreact-start"
+Homepage = "https://github.com/kjrjay/vegabase"
+Repository = "https://github.com/kjrjay/vegabase"
 
 [build-system]
 requires = ["uv_build"]

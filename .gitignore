@@ -21,5 +21,5 @@ ssr_dev.js
 *.log
 
 .mise.toml
-.pyreact/
+.vegabase/
 tasks.db

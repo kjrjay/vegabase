@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Global button cursor fix */
+button:not(:disabled) {
+  cursor: pointer;
+}

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
-from pyreact_start.db import query
+from vegabase.db import query
 from sqlalchemy import delete, insert, select
 
 from backend.db.schema import posts

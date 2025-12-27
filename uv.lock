@@ -425,7 +425,7 @@ wheels = [
 ]
 
 [[package]]
-name = "pyreact-start"
+name = "vegabase"
 version = "0.2.0"
 source = { editable = "." }
 dependencies = [

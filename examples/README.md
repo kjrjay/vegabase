@@ -1,6 +1,6 @@
 # PyReact Start Examples
 
-This directory contains example projects that can be used with `pyreact init --example`.
+This directory contains example projects that can be used with `vegabase init --example`.
 
 ## Available Examples
 
@@ -12,14 +12,14 @@ This directory contains example projects that can be used with `pyreact init --e
 
 ```bash
 # Create a new project with the posts example
-pyreact init my-app --example posts
+vegabase init my-app --example posts
 
 # Then set up and run
 cd my-app
 uv sync
 bun install
-pyreact db apply
-pyreact dev
+vegabase db apply
+vegabase dev
 ```
 
 ## Creating New Examples

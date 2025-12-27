@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build and publish script for pyreact-start.
+Build and publish script for vegabase.
 Builds the Python package with TypeScript source included.
 
 Usage:

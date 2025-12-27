@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from pyreact_start.inertia import Inertia, LRUCache
+from vegabase.inertia import Inertia, LRUCache
 
 
 class TestLRUCache:

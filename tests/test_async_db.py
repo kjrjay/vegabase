@@ -7,7 +7,7 @@ import pytest_asyncio
 from pydantic import BaseModel
 from sqlalchemy import Column, Integer, MetaData, String, Table, select, text
 
-from pyreact_start.db import (
+from vegabase.db import (
     AsyncDatabase,
     NotFoundError,
     TooManyRowsError,

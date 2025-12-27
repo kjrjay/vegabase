@@ -5,8 +5,8 @@ Tests for schema management (plan/apply).
 import pytest
 from sqlalchemy import Column, Integer, MetaData, String, Table
 
-from pyreact_start.db import Database, SchemaChange, apply, create_all, plan
-from pyreact_start.db.schema import ChangeType
+from vegabase.db import Database, SchemaChange, apply, create_all, plan
+from vegabase.db.schema import ChangeType
 
 
 @pytest.fixture

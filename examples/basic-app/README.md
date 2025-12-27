@@ -5,7 +5,7 @@ A minimal PyReact Start example — single page, no database.
 ## Setup
 
 ```bash
-pip install pyreact-start
+pip install vegabase
 bun install
 ```
 
@@ -13,7 +13,7 @@ bun install
 
 ```bash
 # Terminal 1
-pyreact dev
+vegabase dev
 
 # Terminal 2
 export APP_ENV=development

@@ -5,7 +5,7 @@ import pathlib
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
-from pyreact_start import Inertia
+from vegabase import Inertia
 
 app = FastAPI()
 
