@@ -1,9 +1,12 @@
 import json
 import os
+import re
 import time
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Literal
+from functools import wraps
+from pathlib import Path
+from typing import Any, Callable, Literal
 from uuid import UUID
 
 import httpx
@@ -13,7 +16,7 @@ from fastapi import Request, Response
 RenderMode = Literal["ssr", "client", "cached", "static"]
 
 
-class InertiaJSONEncoder(json.JSONEncoder):
+class VegabaseJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles Pydantic models and common Python types."""
 
     def default(self, obj: Any) -> Any:  # type: ignore[override]
@@ -74,7 +77,7 @@ class InertiaJSONEncoder(json.JSONEncoder):
 
 def _serialize(data: Any) -> str:
     """Serialize data to JSON using custom encoder."""
-    return json.dumps(data, cls=InertiaJSONEncoder)
+    return json.dumps(data, cls=VegabaseJSONEncoder)
 
 
 class LRUCache:
@@ -117,12 +120,15 @@ class LRUCache:
         return key in self._cache
 
 
-class Inertia:
-    FLASH_SESSION_KEY = "_inertia_flash"
+class ReactRenderer:
+    """React SSR renderer with TanStack Router integration."""
+
+    FLASH_SESSION_KEY = "_vegabase_flash"
 
     def __init__(self, app, ssr_url: str | None = None, cache_maxsize: int = 100):
         self.app = app
         self.is_dev = os.getenv("APP_ENV") == "development"
+        self._routes: list[dict] = []  # Collect routes from @page decorators
 
         # Configure SSR URL
         if ssr_url:
@@ -137,6 +143,121 @@ class Inertia:
 
         # ISR cache with LRU eviction
         self._isr_cache = LRUCache(maxsize=cache_maxsize)
+
+    def page(
+        self,
+        component: str,
+        *,
+        mode: RenderMode = "ssr",
+        cache_time: int = 0,
+        preload: Literal["intent", "viewport", "render"] = "intent",
+    ) -> Callable:
+        """
+        Decorator to register a page route and wrap handler to render React component.
+
+        Usage:
+            @app.get("/")
+            @react.page("Dashboard", mode="client", cache_time=60)
+            async def home(request: Request):
+                return {"user": user}  # Just return props
+
+        Args:
+            component: React component name (e.g., "Dashboard", "Posts/Index")
+            mode: Rendering mode - "ssr", "client", "cached", or "static"
+            cache_time: Client-side cache TTL in seconds (0 = no caching)
+            preload: Preload strategy for TanStack Router
+        """
+
+        def decorator(func: Callable) -> Callable:
+            # Route will be registered when save_routes() is called
+            # Store function reference for path extraction
+            route_info = {
+                "component": component,
+                "mode": mode,
+                "cache_time": cache_time,
+                "preload": preload,
+                "handler": func,
+            }
+            self._routes.append(route_info)
+
+            @wraps(func)
+            async def wrapper(*args: Any, **kwargs: Any) -> Any:
+                # FastAPI injects request - find it in args or kwargs
+                request = kwargs.get("request") or next(
+                    (a for a in args if isinstance(a, Request)), None
+                )
+
+                # Call the original handler to get props
+                props = await func(*args, **kwargs)
+                if not isinstance(props, dict):
+                    # If handler returns a Response directly, pass it through
+                    return props
+
+                if request is None:
+                    raise RuntimeError("Request not found in handler arguments")
+
+                # Render the React component with the props
+                revalidate = cache_time if mode == "cached" else None
+                return await self.render(
+                    component, props, request, mode=mode, revalidate=revalidate
+                )
+
+            return wrapper
+
+        return decorator
+
+    def save_routes(self, path: str | Path = ".vegabase/routes.json") -> Path:
+        """
+        Save collected routes to JSON manifest for TanStack Router generation.
+
+        Args:
+            path: Output path (default: .vegabase/routes.json)
+
+        Returns:
+            Path to the written file
+        """
+        routes_data = []
+
+        for route_info in self._routes:
+            handler = route_info["handler"]
+            # Try to extract path from FastAPI route registration
+            path_pattern = self._extract_path(handler)
+
+            if path_pattern:
+                # Convert {param} to $param (TanStack Router style)
+                tanstack_path = re.sub(r"\{(\w+)\}", r"$\1", path_pattern)
+                routes_data.append(
+                    {
+                        "path": tanstack_path,
+                        "component": route_info["component"],
+                        "cacheTime": route_info["cache_time"],
+                        "preload": route_info["preload"],
+                    }
+                )
+
+        manifest = {"version": 1, "routes": routes_data}
+
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(manifest, indent=2))
+
+        return output_path
+
+    def _extract_path(self, handler: Callable) -> str | None:
+        """
+        Extract URL path from FastAPI route registration.
+
+        Searches app.routes for a route that uses this handler.
+        """
+        for route in getattr(self.app, "routes", []):
+            # FastAPI APIRoute has an endpoint attribute
+            if hasattr(route, "endpoint"):
+                # The wrapper replaces the original function, so check both
+                if route.endpoint == handler or getattr(
+                    route.endpoint, "__wrapped__", None
+                ) == handler:
+                    return route.path
+        return None
 
     def flash(self, request: Request, message: str, type: str = "success") -> None:
         """
@@ -158,7 +279,8 @@ class Inertia:
 
     def _get_and_clear_flash(self, request: Request) -> dict | None:
         """Get flash message from session and clear it."""
-        if not hasattr(request, "session"):
+        # Check if SessionMiddleware is installed by looking for 'session' in scope
+        if "session" not in request.scope:
             return None
         return request.session.pop(self.FLASH_SESSION_KEY, None)
 
@@ -184,7 +306,7 @@ class Inertia:
         cache_key: str | None = None,
     ):
         """
-        Render an Inertia page.
+        Render a React page.
 
         Args:
             component: The React component name (e.g., "Dashboard", "Posts/Index")
@@ -211,20 +333,47 @@ class Inertia:
         }
 
         # CASE A: Client is navigating (AJAX)
-        if "X-Inertia" in request.headers:
+        if "X-Vegabase" in request.headers:
             return Response(
                 content=_serialize(page_data),
                 media_type="application/json",
-                headers={"X-Inertia": "true", "Vary": "X-Inertia"},
+                headers={"X-Vegabase": "true", "Vary": "X-Vegabase"},
             )
 
         # CASE B: First Load (Browser Refresh)
         head: list = []
         body = ""
 
+
         if mode == "client":
-            # Client-side only rendering - no SSR call
-            body = f"<div id='app' data-page='{_serialize(page_data)}'></div>"
+            # Client-side only rendering - return HTML shell directly from Python.
+            #
+            # DESIGN NOTE: We generate this HTML here instead of calling the SSR server
+            # to allow client-only apps to run without the SSR server in production.
+            # This gives deployment flexibility: apps that don't need SSR can deploy
+            # just Python + static JS bundle, without running `vegabase ssr`.
+            #
+            # The tradeoff is some code duplication (HTML template here + in routeTree.gen.tsx),
+            # but we prioritize deployment flexibility over code simplicity.
+            script_src = f"{self.assets_url}/client.js"
+            css_src = f"{self.assets_url}/client.css"
+            html = f"""
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <title>App</title>
+                <link rel="stylesheet" href="{css_src}" />
+              </head>
+              <body>
+                <div id="app"></div>
+                <script type="module" src="{script_src}"></script>
+              </body>
+            </html>
+            """
+            headers: dict[str, str] = {"Vary": "X-Vegabase", "Cache-Control": "private, no-cache"}
+            return Response(content=html, media_type="text/html", headers=headers)
 
         elif mode == "cached":
             # Incremental Static Regeneration - check cache first
@@ -255,40 +404,48 @@ class Inertia:
             # Standard SSR - call SSR server every time
             head, body = await self._ssr_render(page_data)
 
-        # Construct HTML
-        head_html = "\n".join(head) if isinstance(head, list) else str(head)
+        # Construct HTML - check if SSR returned a full document
+        # TanStack Router's root route renders full HTML with <Scripts/> for hydration
+        is_full_document = body.strip().lower().startswith("<!doctype html")
 
-        # Determine asset URLs
-        script_src = f"{self.assets_url}/client.js"
-        css_src = f"{self.assets_url}/client.css"
+        if is_full_document:
+            # SSR returned full HTML document - use it directly (TanStack Router mode)
+            html = body
+        else:
+            # SSR returned component HTML - wrap in document (legacy mode)
+            head_html = "\n".join(head) if isinstance(head, list) else str(head)
 
-        # For html mode, don't include the script tag
-        script_tag = (
-            f'<script type="module" src="{script_src}"></script>'
-            if should_hydrate
-            else ""
-        )
+            # Determine asset URLs
+            script_src = f"{self.assets_url}/client.js"
+            css_src = f"{self.assets_url}/client.css"
 
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-            {head_html}
-            <title>PyReact App</title>
-            <link rel="stylesheet" href="{css_src}" />
-          </head>
-          <body>
-            {body}
-            {script_tag}
-          </body>
-        </html>
-        """
+            # For html mode, don't include the script tag
+            script_tag = (
+                f'<script type="module" src="{script_src}"></script>'
+                if should_hydrate
+                else ""
+            )
+
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+                {head_html}
+                <title>PyReact App</title>
+                <link rel="stylesheet" href="{css_src}" />
+              </head>
+              <body>
+                {body}
+                {script_tag}
+              </body>
+            </html>
+            """
 
         # Build response headers
-        # Vary by X-Inertia so CDNs cache JSON/HTML responses separately
-        headers: dict[str, str] = {"Vary": "X-Inertia"}
+        # Vary by X-Vegabase so CDNs cache JSON/HTML responses separately
+        headers: dict[str, str] = {"Vary": "X-Vegabase"}
 
         # Add Cache-Control headers for ISR mode (CDN + browser caching)
         if mode == "cached" and revalidate is not None and revalidate > 0:

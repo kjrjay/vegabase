@@ -2,7 +2,7 @@
 
 **Full-stack React + Python with zero configuration.**
 
-Build modern React applications powered by FastAPI, Bun, Inertia.js, and Tailwind CSS — all from a single `pip install`.
+Build modern React applications powered by FastAPI, Bun, TanStack Router, and Tailwind CSS — all from a single `pip install`.
 
 ## Motivation
 
@@ -69,21 +69,21 @@ vegabase init --name my-app --db postgres    # Include PostgreSQL setup
 Control how each page is rendered:
 
 ```python
-from vegabase import Inertia
+from vegabase import ReactRenderer
 
-inertia = Inertia(app)
+react = ReactRenderer(app)
 
 # Default: Server-side rendering
-await inertia.render("Home", props, request, mode="ssr")
+await react.render("Home", props, request, mode="ssr")
 
 # Client-only: Skip SSR, render in browser
-await inertia.render("Dashboard", props, request, mode="client")
+await react.render("Dashboard", props, request, mode="client")
 
 # Cached (ISR): Cache for 60 seconds
-await inertia.render("Posts/Index", props, request, mode="cached", revalidate=60)
+await react.render("Posts/Index", props, request, mode="cached", revalidate=60)
 
 # Static: Pure HTML, no JavaScript bundle
-await inertia.render("About", props, request, mode="static")
+await react.render("About", props, request, mode="static")
 ```
 
 | Mode | SSR | Hydration | Use Case |
@@ -101,12 +101,12 @@ Built-in flash message support:
 from starlette.middleware.sessions import SessionMiddleware
 
 app.add_middleware(SessionMiddleware, secret_key="...")
-inertia = Inertia(app)
+react = ReactRenderer(app)
 
 @app.post("/posts/create")
 async def create_post(request: Request):
     # ... create post ...
-    inertia.flash(request, "Post created!", type="success")
+    react.flash(request, "Post created!", type="success")
     return RedirectResponse(url="/posts", status_code=303)
 ```
 
