@@ -157,7 +157,7 @@ ignore = ["E501"]
         "typecheck": "tsc --noEmit"
     }},
     "dependencies": {{
-        "@inertiajs/react": "^2.2.18",
+        "@tanstack/react-router": "^1.120.0",
         "react": "^19.2.0",
         "react-dom": "^19.2.0"
     }},
@@ -183,7 +183,7 @@ import pathlib
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from vegabase import Inertia
+from vegabase import ReactRenderer
 from vegabase.db import Database, apply
 
 from backend.db.schema import DATABASE_URL, metadata
@@ -196,8 +196,8 @@ db = Database(DATABASE_URL)
 # Auto-sync schema in development (remove in production)
 apply(db.engine, metadata)
 
-# Initialize Inertia
-inertia = Inertia(app)
+# Initialize Renderer
+react = ReactRenderer(app)
 
 # Mount static files (create static dir if it doesn't exist)
 pathlib.Path("static/dist").mkdir(parents=True, exist_ok=True)
@@ -206,7 +206,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def home(request: Request):
-    return await inertia.render("Home", {{"message": "Hello from PyReact!"}}, request)
+    return await react.render("Home", {{"message": "Hello from PyReact!"}}, request)
 
 
 if __name__ == "__main__":
@@ -221,12 +221,12 @@ import pathlib
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from vegabase import Inertia
+from vegabase import ReactRenderer
 
 app = FastAPI()
 
-# Initialize Inertia
-inertia = Inertia(app)
+# Initialize Renderer
+react = ReactRenderer(app)
 
 # Mount static files (create static dir if it doesn't exist)
 pathlib.Path("static/dist").mkdir(parents=True, exist_ok=True)
@@ -235,7 +235,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def home(request: Request):
-    return await inertia.render("Home", {{"message": "Hello from PyReact!"}}, request)
+    return await react.render("Home", {{"message": "Hello from PyReact!"}}, request)
 
 
 if __name__ == "__main__":
@@ -620,6 +620,10 @@ def main():
         show_help()
         return
 
+    # Extract routes from Python app before delegating to Bun (for dev/build)
+    if command in ("dev", "build"):
+        extract_routes()
+
     # Delegate to TypeScript CLI for dev, build, ssr commands
     package_dir = os.path.dirname(os.path.abspath(__file__))
     cli_script = os.path.join(package_dir, "ts", "src", "cli.ts")
@@ -647,6 +651,35 @@ def main():
         sys.exit(e.returncode)
     except KeyboardInterrupt:
         sys.exit(130)
+
+
+def extract_routes():
+    """
+    Extract routes from the user's Python app and save to .vegabase/routes.json.
+
+    Assumes `backend.main` exports a `react` instance of ReactRenderer.
+    """
+    # Add current directory to path so we can import backend.main
+    if str(Path.cwd()) not in sys.path:
+        sys.path.insert(0, str(Path.cwd()))
+
+    try:
+        import importlib
+
+        backend_main = importlib.import_module("backend.main")
+
+        if not hasattr(backend_main, "react"):
+            print("❌ Error: backend.main must export 'react' (a ReactRenderer instance)")
+            sys.exit(1)
+
+        react = backend_main.react
+        output = react.save_routes()
+        route_count = len(react._routes)
+        print(f"📋 Extracted {route_count} route(s) → {output}")
+
+    except ImportError as e:
+        print(f"❌ Error: Could not import backend.main: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
