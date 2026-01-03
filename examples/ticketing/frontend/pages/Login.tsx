@@ -1,34 +1,38 @@
 import { type FormEvent, useState } from "react";
-import { Head, router } from "@inertiajs/react";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const router = useRouter();
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
 
-    router.post(
-      "/login",
-      { username, password },
-      {
-        onError: () => {
-          setError("Invalid username or password");
-        },
-      },
-    );
+    const response = await fetch("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (response.ok || response.redirected) {
+      await router.invalidate();
+      navigate({ to: "/" });
+    } else {
+      setError("Invalid username or password");
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
-      <Head title="Login" />
-
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to continue to pyreact</p>
+          <p className="text-gray-600">Sign in to continue to vegabase</p>
         </div>
 
         {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>}

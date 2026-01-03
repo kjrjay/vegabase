@@ -18,15 +18,17 @@
    ```
 
 2. Install backend dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
 
 3. Setup database:
+
    ```bash
    vegabase db apply   # Creates tables
    ```
-   
+
    On first run, demo data (22 tickets, 8 tasks) is auto-seeded.
    To skip seeding: `SKIP_SEED=1 vegabase dev`
 

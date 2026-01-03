@@ -4,9 +4,10 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from vegabase.db import query
 from sqlalchemy import delete, insert, select
+from starlette.responses import RedirectResponse
 
 from backend.db.schema import posts
-from backend.initial import db, inertia
+from backend.initial import db, react
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -20,18 +21,20 @@ class Post(BaseModel):
 
 
 @router.get("")
+@react.page("Posts/Index")
 async def list_posts(request: Request):
     """List all posts."""
     with db.connection() as conn:
         all_posts = conn.all(query(Post, select(posts)))
 
-    return await inertia.render("Posts/Index", {"posts": all_posts}, request)
+    return {"posts": all_posts}
 
 
 @router.get("/create")
+@react.page("Posts/Create")
 async def create_post_form(request: Request):
     """Show create post form."""
-    return await inertia.render("Posts/Create", {}, request)
+    return {}
 
 
 class PostCreate(BaseModel):
@@ -48,9 +51,7 @@ async def create_post(request: Request, data: PostCreate):
         conn.execute(insert(posts).values(title=data.title, body=data.body))
 
     # Set flash message and redirect
-    inertia.flash(request, "Post created successfully!", type="success")
-    from starlette.responses import RedirectResponse
-
+    react.flash(request, "Post created successfully!", type="success")
     return RedirectResponse(url="/posts", status_code=303)
 
 
@@ -61,7 +62,5 @@ async def delete_post(request: Request, post_id: int):
         conn.execute(delete(posts).where(posts.c.id == post_id))
 
     # Set flash message and redirect
-    inertia.flash(request, "Post deleted successfully!", type="success")
-    from starlette.responses import RedirectResponse
-
+    react.flash(request, "Post deleted successfully!", type="success")
     return RedirectResponse(url="/posts", status_code=303)

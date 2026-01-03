@@ -5,7 +5,7 @@ description = "Full-stack React + Python with zero configuration. Build modern R
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
-keywords = ["react", "fastapi", "bun", "inertia", "tailwind", "ssr", "full-stack"]
+keywords = ["react", "fastapi", "bun", "tanstack", "tailwind", "ssr", "full-stack"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: FastAPI",
