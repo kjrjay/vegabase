@@ -4,7 +4,6 @@ import pathlib
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-
 from vegabase import ReactRenderer
 
 app = FastAPI()
@@ -21,9 +20,3 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @react.page("Home")
 async def home(request: Request):
     return {"message": "Hello from Vegabase!"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

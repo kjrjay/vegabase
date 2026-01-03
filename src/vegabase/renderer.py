@@ -1,12 +1,12 @@
 import json
-import os
 import re
 import time
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 from uuid import UUID
 
 import httpx
@@ -126,20 +126,19 @@ class ReactRenderer:
     FLASH_SESSION_KEY = "_vegabase_flash"
 
     def __init__(self, app, ssr_url: str | None = None, cache_maxsize: int = 100):
+        from vegabase.config import settings
+
         self.app = app
-        self.is_dev = os.getenv("APP_ENV") == "development"
         self._routes: list[dict] = []  # Collect routes from @page decorators
 
         # Configure SSR URL
         if ssr_url:
             self.ssr_url = ssr_url
-        elif self.is_dev:
-            self.ssr_url = "http://localhost:3001/render"
         else:
-            self.ssr_url = "http://localhost:13714/render"
+            self.ssr_url = settings.SSR_URL
 
         # Configure asset paths based on environment
-        self.assets_url = "http://localhost:3001" if self.is_dev else "/static/dist"
+        self.assets_url = settings.ASSETS_URL
 
         # ISR cache with LRU eviction
         self._isr_cache = LRUCache(maxsize=cache_maxsize)
@@ -251,12 +250,11 @@ class ReactRenderer:
         """
         for route in getattr(self.app, "routes", []):
             # FastAPI APIRoute has an endpoint attribute
-            if hasattr(route, "endpoint"):
-                # The wrapper replaces the original function, so check both
-                if route.endpoint == handler or getattr(
-                    route.endpoint, "__wrapped__", None
-                ) == handler:
-                    return route.path
+            if hasattr(route, "endpoint") and (
+                route.endpoint == handler
+                or getattr(route.endpoint, "__wrapped__", None) == handler
+            ):
+                return route.path
         return None
 
     def flash(self, request: Request, message: str, type: str = "success") -> None:
@@ -344,7 +342,6 @@ class ReactRenderer:
         head: list = []
         body = ""
 
-
         if mode == "client":
             # Client-side only rendering - return HTML shell directly from Python.
             #
@@ -372,7 +369,10 @@ class ReactRenderer:
               </body>
             </html>
             """
-            headers: dict[str, str] = {"Vary": "X-Vegabase", "Cache-Control": "private, no-cache"}
+            headers: dict[str, str] = {
+                "Vary": "X-Vegabase",
+                "Cache-Control": "private, no-cache",
+            }
             return Response(content=html, media_type="text/html", headers=headers)
 
         elif mode == "cached":
@@ -433,7 +433,7 @@ class ReactRenderer:
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
                 {head_html}
-                <title>PyReact App</title>
+                <title>Vegabase App</title>
                 <link rel="stylesheet" href="{css_src}" />
               </head>
               <body>

@@ -5,7 +5,6 @@ User CRUD and authentication operations.
 import hashlib
 
 from sqlalchemy import insert, select
-
 from vegabase.db import query
 
 from . import db

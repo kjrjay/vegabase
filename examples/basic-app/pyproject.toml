@@ -1,6 +1,17 @@
 [project]
 name = "basic-app"
 version = "0.1.0"
-description = "Minimal PyReact Start example"
+description = "Minimal Vegabase app example"
 requires-python = ">=3.11"
 dependencies = ["vegabase", "fastapi>=0.115.8", "uvicorn>=0.34.0"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]

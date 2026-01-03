@@ -1,3 +1,4 @@
+import importlib
 import importlib.util
 import os
 import shutil
@@ -8,6 +9,13 @@ import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
+
+try:
+    import click
+except ImportError:
+    print("❌ Error: 'click' is required. Please install vegabase with dependencies.")
+    print("   pip install vegabase")
+    sys.exit(1)
 
 # GitHub repo for examples
 EXAMPLES_REPO = "kjrjay/vegabase"
@@ -80,9 +88,9 @@ def download_example(example: str, target_dir: Path, project_name: str):
         sys.exit(1)
 
 
-def init_project(project_name: str | None = None, with_db: bool = False):
+def init_project_structure(project_name: str | None = None, with_db: bool = False):
     """
-    Scaffold a new PyReact project.
+    Scaffold a new Vegabase project.
 
     Args:
         project_name: Name of the project (creates new directory if provided)
@@ -100,7 +108,7 @@ def init_project(project_name: str | None = None, with_db: bool = False):
         target_dir = Path.cwd()
         project_name = target_dir.name
 
-    print(f"🚀 Creating PyReact project '{project_name}'...\n")
+    print(f"🚀 Creating Vegabase project '{project_name}'...\n")
 
     # Create directory structure
     (target_dir / "backend").mkdir(exist_ok=True)
@@ -123,7 +131,7 @@ postgres = ["psycopg[binary]>=3.0.0"]
     pyproject_toml = f'''[project]
 name = "{project_name}"
 version = "0.1.0"
-description = "A PyReact Start app"
+description = "A Vegabase app"
 requires-python = ">=3.11"
 dependencies = [
     "vegabase",
@@ -177,7 +185,7 @@ ignore = ["E501"]
     backend_init = ""
 
     if with_db:
-        backend_main = f'''"""{project_name} - PyReact Start backend."""
+        backend_main = f'''"""{project_name} - Vegabase backend."""
 
 import pathlib
 
@@ -206,7 +214,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def home(request: Request):
-    return await react.render("Home", {{"message": "Hello from PyReact!"}}, request)
+    return await react.render("Home", {{"message": "Hello from Vegabase!"}}, request)
 
 
 if __name__ == "__main__":
@@ -215,7 +223,7 @@ if __name__ == "__main__":
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
 '''
     else:
-        backend_main = f'''"""{project_name} - PyReact Start backend."""
+        backend_main = f'''"""{project_name} - Vegabase backend."""
 
 import pathlib
 
@@ -235,7 +243,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def home(request: Request):
-    return await react.render("Home", {{"message": "Hello from PyReact!"}}, request)
+    return await react.render("Home", {{"message": "Hello from Vegabase!"}}, request)
 
 
 if __name__ == "__main__":
@@ -277,7 +285,7 @@ export default function Home({ message }: HomeProps) {
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-12 shadow-2xl text-center">
                 <h1 className="text-5xl font-bold text-white mb-4">
-                    🚀 PyReact Start
+                    🚀 Vegabase
                 </h1>
                 <p className="text-xl text-white/80">
                     {message}
@@ -356,7 +364,7 @@ users = Table(
     print("   pyproject.toml")
     print("   tsconfig.json")
     print("")
-    print(f"✅ Created PyReact project '{project_name}'")
+    print(f"✅ Created Vegabase project '{project_name}'")
     if with_db:
         print("   (with database support)")
     print("")
@@ -429,230 +437,6 @@ def load_schema():
     return schema.DATABASE_URL, schema.metadata
 
 
-def db_plan():
-    """Show planned schema changes without applying them."""
-    from vegabase.db import Database, plan
-
-    database_url, metadata = load_schema()
-    db = Database(database_url)
-
-    print("🔍 Comparing schema to database...")
-    print(f"   Database: {database_url}")
-    print("")
-
-    changes = plan(db.engine, metadata)
-
-    if not changes:
-        print("✅ Schema is in sync - no changes needed")
-        return
-
-    print(f"📋 {len(changes)} change(s) planned:\n")
-    for change in changes:
-        print(f"   • {change}")
-
-    print("")
-    print("Run 'vegabase db apply' to apply these changes.")
-
-    db.dispose()
-
-
-def db_apply(force: bool = False):
-    """Apply schema changes to the database."""
-    from vegabase.db import Database, apply, plan
-
-    database_url, metadata = load_schema()
-    db = Database(database_url)
-
-    print("🔍 Comparing schema to database...")
-    print(f"   Database: {database_url}")
-    print("")
-
-    changes = plan(db.engine, metadata)
-
-    if not changes:
-        print("✅ Schema is in sync - no changes needed")
-        db.dispose()
-        return
-
-    print(f"📋 {len(changes)} change(s) to apply:\n")
-    for change in changes:
-        print(f"   • {change}")
-    print("")
-
-    # Confirm unless --yes flag
-    if not force:
-        try:
-            response = input("Apply these changes? [y/N] ").strip().lower()
-            if response not in ("y", "yes"):
-                print("Cancelled.")
-                db.dispose()
-                return
-        except KeyboardInterrupt:
-            print("\nCancelled.")
-            db.dispose()
-            return
-
-    # Apply changes
-    print("")
-    print("⚡ Applying changes...")
-    applied = apply(db.engine, metadata)
-
-    print(f"✅ Applied {len(applied)} change(s)")
-
-    db.dispose()
-
-
-def db_command(args: list[str]):
-    """Handle 'vegabase db' subcommands."""
-    if not args:
-        print("Usage: vegabase db <command>")
-        print("")
-        print("Commands:")
-        print("  plan    Show planned schema changes (dry run)")
-        print("  apply   Apply schema changes to the database")
-        print("")
-        print("Convention: Schema is loaded from db/schema.py")
-        return
-
-    subcommand = args[0]
-
-    if subcommand == "plan":
-        db_plan()
-    elif subcommand == "apply":
-        force = "--yes" in args or "-y" in args
-        db_apply(force=force)
-    else:
-        print(f"❌ Unknown db command: {subcommand}")
-        print("   Available: plan, apply")
-        sys.exit(1)
-
-
-def show_help():
-    """Show CLI help."""
-    print("PyReact Start CLI")
-    print("")
-    print("Commands:")
-    print("  init [name]          Create a new PyReact project")
-    print("    --db               Include database schema scaffolding")
-    print("    --example <name>   Use an example template (e.g., posts)")
-    print("  dev                  Start development server with hot reload")
-    print("  build                Build for production")
-    print("  ssr                  Start the SSR server")
-    print("  db                   Manage database schema")
-    print("")
-    print("Database commands:")
-    print("  db plan              Show planned schema changes (dry run)")
-    print("  db apply             Apply schema changes to the database")
-    print("")
-    print("Examples:")
-    print("  vegabase init my-app")
-    print("  vegabase init my-app --db")
-    print("  vegabase init my-app --example posts")
-
-
-def main():
-    """
-    Main entry point for the 'vegabase' command.
-    Handles 'init' command in Python, delegates others to TypeScript CLI.
-    """
-    if len(sys.argv) < 2:
-        show_help()
-        return
-
-    command = sys.argv[1]
-
-    # Handle init command in Python (doesn't need Bun)
-    if command == "init":
-        # Parse init arguments
-        args = sys.argv[2:]
-        project_name = None
-        with_db = "--db" in args
-        example = None
-
-        # Parse --example value
-        for i, arg in enumerate(args):
-            if arg == "--example" and i + 1 < len(args):
-                example = args[i + 1]
-            elif (
-                not arg.startswith("--")
-                and (i == 0 or args[i - 1] != "--example")
-                and project_name is None
-            ):
-                project_name = arg
-
-        # If using an example, download it
-        if example:
-            if project_name is None:
-                project_name = example  # Use example name as project name
-
-            target_dir = Path.cwd() / project_name
-            if target_dir.exists() and any(target_dir.iterdir()):
-                print(
-                    f"❌ Error: Directory '{project_name}' already exists and is not empty."
-                )
-                sys.exit(1)
-            target_dir.mkdir(parents=True, exist_ok=True)
-
-            print(
-                f"🚀 Creating PyReact project '{project_name}' from example '{example}'...\n"
-            )
-            download_example(example, target_dir, project_name)
-
-            print("")
-            print(f"✅ Created PyReact project '{project_name}'")
-            print("")
-            print("Next steps:")
-            print(f"  cd {project_name}")
-            print("  uv sync          # Install Python dependencies")
-            print("  bun install      # Install JS dependencies")
-            print("  vegabase db apply # Create database tables")
-            print("  vegabase dev      # Start development server")
-        else:
-            init_project(project_name, with_db=with_db)
-        return
-
-    # Handle db command in Python
-    if command == "db":
-        db_command(sys.argv[2:])
-        return
-
-    if command in ("--help", "-h", "help"):
-        show_help()
-        return
-
-    # Extract routes from Python app before delegating to Bun (for dev/build)
-    if command in ("dev", "build"):
-        extract_routes()
-
-    # Delegate to TypeScript CLI for dev, build, ssr commands
-    package_dir = os.path.dirname(os.path.abspath(__file__))
-    cli_script = os.path.join(package_dir, "ts", "src", "cli.ts")
-
-    bun_exec = shutil.which("bun")
-    if not bun_exec:
-        print("❌ Error: 'bun' executable not found in PATH.")
-        print("   Please install Bun: https://bun.sh")
-        sys.exit(1)
-
-    if not os.path.exists(cli_script):
-        print(f"❌ Error: CLI script not found at {cli_script}")
-        print("   This package may not be properly installed.")
-        sys.exit(1)
-
-    # Type assertion to help type checker
-    assert bun_exec is not None
-
-    # Run the TypeScript CLI directly with Bun
-    cmd: list[str] = [bun_exec, "run", cli_script] + sys.argv[1:]
-
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        sys.exit(e.returncode)
-    except KeyboardInterrupt:
-        sys.exit(130)
-
-
 def extract_routes():
     """
     Extract routes from the user's Python app and save to .vegabase/routes.json.
@@ -669,7 +453,9 @@ def extract_routes():
         backend_main = importlib.import_module("backend.main")
 
         if not hasattr(backend_main, "react"):
-            print("❌ Error: backend.main must export 'react' (a ReactRenderer instance)")
+            print(
+                "❌ Error: backend.main must export 'react' (a ReactRenderer instance)"
+            )
             sys.exit(1)
 
         react = backend_main.react
@@ -679,7 +465,252 @@ def extract_routes():
 
     except ImportError as e:
         print(f"❌ Error: Could not import backend.main: {e}")
+        print("   Make sure you are running this from your project root.")
         sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error extracting routes: {e}")
+        sys.exit(1)
+
+
+@click.group()
+def main():
+    """Vegabase CLI"""
+    pass
+
+
+@main.command()
+@click.argument("name", required=False)
+@click.option("--db", is_flag=True, help="Include database schema scaffolding")
+@click.option("--example", help="Use an example template (e.g., posts)")
+def init(name: str | None, db: bool, example: str | None):
+    """Create a new Vegabase project"""
+    if example:
+        project_name = name or example
+        target_dir = Path.cwd() / project_name
+        if target_dir.exists() and any(target_dir.iterdir()):
+            print(
+                f"❌ Error: Directory '{project_name}' already exists and is not empty."
+            )
+            sys.exit(1)
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        print(
+            f"🚀 Creating Vegabase project '{project_name}' from example '{example}'...\n"
+        )
+        download_example(example, target_dir, project_name)
+
+        print("")
+        print(f"✅ Created Vegabase project '{project_name}'")
+        print("")
+        print("Next steps:")
+        print(f"  cd {project_name}")
+        print("  uv sync          # Install Python dependencies")
+        print("  bun install      # Install JS dependencies")
+        print("  vegabase db apply # Create database tables")
+        print("  vegabase dev      # Start development server")
+    else:
+        init_project_structure(name, with_db=db)
+
+
+def _start_python_server(
+    port: int | None,
+    is_dev: bool,
+) -> None:
+    """Helper to start Python server (dev or production)."""
+    from vegabase.config import settings
+
+    env = os.environ.copy()
+    if port:
+        env["PORT"] = str(port)
+
+    # Determine which server URL to display
+    if is_dev:
+        server_url = settings.ASSETS_URL.replace("http://", "").replace("https://", "")
+        server_type = "dev"
+    else:
+        server_url = (
+            settings.SSR_URL.replace("http://", "")
+            .replace("https://", "")
+            .replace("/render", "")
+        )
+        server_type = "ssr"
+
+    print(f"🌍 Environment: {settings.current_env}")
+    print("🐍 Starting Python server...")
+    print(f"   (Make sure bun {server_type} server is running at {server_url})")
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "backend.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        str(port) if port else "8000",
+    ]
+
+    # Add reload flag for dev mode
+    if is_dev:
+        cmd.append("--reload")
+
+    try:
+        subprocess.run(cmd, check=True, env=env)
+    except subprocess.CalledProcessError as e:
+        sys.exit(e.returncode)
+    except KeyboardInterrupt:
+        sys.exit(130)
+
+
+@main.command()
+@click.argument("mode", type=click.Choice(["bun", "py"]))
+@click.option("--port", type=int, help="Specify port")
+def dev(mode: str, port: int | None):
+    """Start development server"""
+    # Extract routes from Python app before delegating
+    extract_routes()
+
+    if mode == "py":
+        _start_python_server(port, is_dev=True)
+    else:
+        # Bun mode (Delegate to TS CLI)
+        args = ["--port", str(port)] if port else []
+        _run_bun_cli("dev", args)
+
+
+@main.command()
+@click.argument("mode", type=click.Choice(["bun", "py"]))
+@click.option("--port", type=int, help="Specify port")
+def start(mode: str, port: int | None):
+    """Start production server"""
+    if mode == "py":
+        _start_python_server(port, is_dev=False)
+    else:
+        # Bun mode (Delegate to TS CLI)
+        args = ["--port", str(port)] if port else []
+        _run_bun_cli("start", args)
+
+
+@main.command()
+def build():
+    """Build for production"""
+    extract_routes()
+    _run_bun_cli("build", [])
+
+
+@main.group()
+def db():
+    """Manage database schema"""
+    pass
+
+
+@db.command()
+def plan():
+    """Show planned schema changes (dry run)"""
+    from vegabase.db import Database
+    from vegabase.db import plan as db_plan_func
+
+    database_url, metadata = load_schema()
+    db_conn = Database(database_url)
+
+    print("🔍 Comparing schema to database...")
+    print(f"   Database: {database_url}")
+    print("")
+
+    changes = db_plan_func(db_conn.engine, metadata)
+
+    if not changes:
+        print("✅ Schema is in sync - no changes needed")
+        return
+
+    print(f"📋 {len(changes)} change(s) planned:\n")
+    for change in changes:
+        print(f"   • {change}")
+
+    print("")
+    print("Run 'vegabase db apply' to apply these changes.")
+    db_conn.dispose()
+
+
+@db.command()
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
+def apply(yes: bool):
+    """Apply schema changes to the database"""
+    from vegabase.db import Database
+    from vegabase.db import apply as db_apply_func
+    from vegabase.db import plan as db_plan_func
+
+    database_url, metadata = load_schema()
+    db_conn = Database(database_url)
+
+    print("🔍 Comparing schema to database...")
+    print(f"   Database: {database_url}")
+    print("")
+
+    changes = db_plan_func(db_conn.engine, metadata)
+
+    if not changes:
+        print("✅ Schema is in sync - no changes needed")
+        db_conn.dispose()
+        return
+
+    print(f"📋 {len(changes)} change(s) to apply:\n")
+    for change in changes:
+        print(f"   • {change}")
+    print("")
+
+    if not yes:
+        try:
+            response = input("Apply these changes? [y/N] ").strip().lower()
+            if response not in ("y", "yes"):
+                print("Cancelled.")
+                db_conn.dispose()
+                return
+        except KeyboardInterrupt:
+            print("\nCancelled.")
+            db_conn.dispose()
+            return
+
+    print("")
+    print("⚡ Applying changes...")
+    applied = db_apply_func(db_conn.engine, metadata)
+    print(f"✅ Applied {len(applied)} change(s)")
+    db_conn.dispose()
+
+
+def _run_bun_cli(command: str, args: list[str]):
+    package_dir = os.path.dirname(os.path.abspath(__file__))
+    cli_script = os.path.join(package_dir, "ts", "src", "cli.ts")
+
+    bun_exec = shutil.which("bun")
+    if not bun_exec:
+        print("❌ Error: 'bun' executable not found in PATH.")
+        print("   Please install Bun: https://bun.sh")
+        sys.exit(1)
+
+    if not os.path.exists(cli_script):
+        print(f"❌ Error: CLI script not found at {cli_script}")
+        print("   This package may not be properly installed.")
+        sys.exit(1)
+
+    cmd = [bun_exec, "run", cli_script, command] + args
+
+    # Pass through environment variables (including PORT if set)
+    env = os.environ.copy()
+
+    # Extract port from args and set PORT env var for TS CLI
+    # TS CLI currently doesn't parse --port flag, it reads process.env.PORT
+    if "--port" in args:
+        port_index = args.index("--port")
+        if port_index + 1 < len(args):
+            env["PORT"] = args[port_index + 1]
+
+    try:
+        subprocess.run(cmd, check=True, env=env)
+    except subprocess.CalledProcessError as e:
+        sys.exit(e.returncode)
+    except KeyboardInterrupt:
+        sys.exit(130)
 
 
 if __name__ == "__main__":

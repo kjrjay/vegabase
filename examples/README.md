@@ -1,4 +1,4 @@
-# PyReact Start Examples
+# Vegabase app Examples
 
 This directory contains example projects that can be used with `vegabase init --example`.
 

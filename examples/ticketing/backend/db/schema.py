@@ -2,9 +2,6 @@
 Database schema and models.
 """
 
-# Database URL (required by vegabase CLI)
-DATABASE_URL = "sqlite:///tasks.db"
-
 from pydantic import BaseModel
 from sqlalchemy import (
     Boolean,
@@ -15,6 +12,9 @@ from sqlalchemy import (
     Table,
     Text,
 )
+
+# Database URL (required by vegabase CLI)
+DATABASE_URL = "sqlite:///tasks.db"
 
 # Schema definition
 metadata = MetaData()

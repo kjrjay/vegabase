@@ -1,11 +1,10 @@
-# Basic App
+# Posts Example
 
-A minimal Vegabase app example — single page, no database.
+A simple Vegabase example demonstrating routing and data handling.
 
 ## Setup
 
 ```bash
-pip install vegabase
 bun install
 ```
 
@@ -26,4 +25,14 @@ You can specify custom ports if needed:
 ```bash
 vegabase dev bun --port 4001
 vegabase dev py --port 8001
+```
+
+## Production
+
+```bash
+# Start SSR Server
+nohup vegabase start bun > ssr.log 2>&1 &
+
+# Start Backend
+vegabase start py
 ```

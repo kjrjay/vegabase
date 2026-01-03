@@ -1,0 +1,9 @@
+[default]
+# Settings for production, staging, and any non-development environment
+SSR_URL = "http://localhost:13714/render"
+ASSETS_URL = "/static/dist"
+
+[development]
+# Development environment overrides (default when VEGABASE_APP_ENV not set)
+SSR_URL = "http://localhost:3001/render"
+ASSETS_URL = "http://localhost:3001"

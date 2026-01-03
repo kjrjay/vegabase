@@ -230,29 +230,29 @@ import { createRouter, createClientRouter } from './routeTree.gen';
 
 // Hot Reload Logic for Development
 if (typeof window !== 'undefined' && window.location.hostname === "localhost") {
-    const ws = new WebSocket("ws://localhost:3001/ws");
-    ws.onmessage = (event) => {
-        if (event.data === "reload") {
-            console.log("♻️ Refreshing...");
-            window.location.reload();
-        }
-    };
+    const ws = new WebSocket("ws://localhost:${process.env.PORT || 3001}/ws");
+  ws.onmessage = (event) => {
+    if (event.data === "reload") {
+      console.log("♻️ Refreshing...");
+      window.location.reload();
+    }
+  };
 }
 
 // Check if SSR dehydration data exists (set by Scripts component via streaming SSR)
 if (typeof window !== 'undefined' && (window as any).$_TSR) {
-    // SSR mode: Hydrate entire document with RouterClient (streaming SSR)
-    console.log("🔥 Hydrating SSR page");
-    const router = createRouter();
-    hydrateRoot(document, <RouterClient router={router} />);
+  // SSR mode: Hydrate entire document with RouterClient (streaming SSR)
+  console.log("🔥 Hydrating SSR page");
+  const router = createRouter();
+  hydrateRoot(document, <RouterClient router={ router } />);
 } else {
-    // Client-only mode: Mount into #app using client router
-    console.log("📦 Client-side render");
-    const appElement = document.getElementById('app');
-    if (appElement) {
-        const clientRouter = createClientRouter();
-        createRoot(appElement).render(<RouterProvider router={clientRouter} />);
-    }
+  // Client-only mode: Mount into #app using client router
+  console.log("📦 Client-side render");
+  const appElement = document.getElementById('app');
+  if (appElement) {
+    const clientRouter = createClientRouter();
+    createRoot(appElement).render(<RouterProvider router={ clientRouter } />);
+  }
 }
 `.trim();
 }
@@ -407,7 +407,7 @@ async function dev() {
     // Bundle SSR (Library for Dev Server)
     await Bun.build({
       entrypoints: [entries.ssr],
-      outdir: "./backend",
+      outdir: "./.vegabase",
       naming: { entry: "ssr_dev.js" },
       target: "bun",
       external: entries.external,
@@ -419,14 +419,14 @@ async function dev() {
   await build();
 
   const server = Bun.serve({
-    port: 3001,
+    port: process.env.PORT || 3001,
     async fetch(req, server) {
       const url = new URL(req.url);
 
       // SSR Render Endpoint
       if (req.method === "POST" && url.pathname === "/render") {
         try {
-          const buildPath = `${projectDir}/backend/ssr_dev.js`;
+          const buildPath = `${vegabaseDir}/ssr_dev.js`;
           const { default: render } = await import(buildPath + `?t=${Date.now()}`);
           const page = await req.json();
           const result = await render(page);
@@ -522,7 +522,7 @@ async function build() {
   // Bundle the Server (for SSR)
   await Bun.build({
     entrypoints: [entries.ssrServer],
-    outdir: "./backend",
+    outdir: "./.vegabase",
     naming: { entry: "ssr.js" },
     target: "bun",
     external: entries.external,
@@ -531,19 +531,19 @@ async function build() {
   console.log("✅ SSR Bundles Built");
 }
 
-// ==================== SSR COMMAND ====================
-async function ssr() {
-  const ssrPath = path.join(projectDir, "backend", "ssr.js");
+// ==================== START COMMAND ====================
+async function start() {
+  const ssrPath = path.join(vegabaseDir, "ssr.js");
 
   if (!fs.existsSync(ssrPath)) {
-    console.error("❌ Error: SSR server bundle not found at backend/ssr.js");
+    console.error("❌ Error: SSR server bundle not found at .vegabase/ssr.js");
     console.error("   Run 'vegabase build' first to create the production bundle.");
     process.exit(1);
   }
 
   const port = Number(process.env.PORT) || 13714;
 
-  console.log(`🚀 Starting SSR server on port ${port}...`);
+  console.log(`🚀 Starting production server on port ${port}...`);
   console.log(`   Bundle: ${ssrPath}`);
   console.log(`   Press Ctrl+C to stop`);
   console.log("");
@@ -551,7 +551,7 @@ async function ssr() {
   try {
     await import(ssrPath);
   } catch (error: any) {
-    console.error("❌ Error starting SSR server:");
+    console.error("❌ Error starting production server:");
     console.error(error.message);
     process.exit(1);
   }
@@ -567,10 +567,10 @@ switch (command) {
   case "build":
     await build();
     break;
-  case "ssr":
-    await ssr();
+  case "start":
+    await start();
     break;
   default:
-    console.error("Unknown command. Available commands: dev, build, ssr");
+    console.error("Unknown command. Available commands: dev, build, start");
     process.exit(1);
 }

@@ -1,10 +1,7 @@
 """Tests for route manifest module."""
 
 import json
-import tempfile
 from pathlib import Path
-
-import pytest
 
 from vegabase.manifest import Route, RouteManifest
 
@@ -83,7 +80,9 @@ class TestRouteManifest:
         loaded = RouteManifest.load(output_file)
         assert len(loaded.routes) == 2
         assert loaded.routes[0].path == "/"
-        assert loaded.routes[1].path == "/tasks/:id"  # Original format preserved internally
+        assert (
+            loaded.routes[1].path == "/tasks/:id"
+        )  # Original format preserved internally
 
     def test_from_json(self):
         json_str = """

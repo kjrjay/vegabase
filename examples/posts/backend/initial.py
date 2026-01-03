@@ -1,9 +1,9 @@
 """Shared application dependencies for FastAPI dependency injection."""
 
 from fastapi import FastAPI
+from starlette.middleware.sessions import SessionMiddleware
 from vegabase import ReactRenderer
 from vegabase.db import Database, apply
-from starlette.middleware.sessions import SessionMiddleware
 
 from backend.db.schema import DATABASE_URL, metadata
 

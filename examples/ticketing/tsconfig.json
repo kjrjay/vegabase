@@ -22,8 +22,5 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "paths": {
-      "pyreact/*": ["./lib/js/pyreact/src/*"]
-    }
   }
 }

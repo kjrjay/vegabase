@@ -3,7 +3,6 @@ Task CRUD operations.
 """
 
 from sqlalchemy import delete, insert, select, update
-
 from vegabase.db import query
 
 from . import db

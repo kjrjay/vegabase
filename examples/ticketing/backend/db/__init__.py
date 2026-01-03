@@ -1,6 +1,7 @@
 """
 Database module - exports all db functionality.
 """
+# ruff: noqa: E402
 
 from vegabase.db import AsyncDatabase
 
@@ -19,6 +20,9 @@ ASYNC_DATABASE_URL = DATABASE_URL.replace("sqlite:", "sqlite+aiosqlite:")
 db = AsyncDatabase(ASYNC_DATABASE_URL)
 
 # Re-export CRUD functions
+from datetime import UTC
+
+from .stats import get_dashboard_stats, get_ticket_history
 from .tasks import add_task, delete_task, get_tasks_for_user, update_task
 from .tickets import (
     add_ticket,
@@ -35,7 +39,6 @@ from .users import (
     user_to_public,
     verify_password,
 )
-from .stats import get_dashboard_stats, get_ticket_history
 
 
 async def init_db() -> None:
@@ -55,7 +58,8 @@ async def init_db() -> None:
 
 async def _seed_demo_data() -> None:
     """Seed database with sample data for demo purposes."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
+
     from sqlalchemy import insert as sql_insert
 
     from .schema import tasks, tickets
@@ -65,7 +69,7 @@ async def _seed_demo_data() -> None:
         return
 
     user_id = demo_user.id
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Sample tickets spread over past 8 weeks
     ticket_data = [
@@ -143,6 +147,7 @@ __all__ = [
     # Database
     "db",
     "init_db",
+    "metadata",
     # Models
     "Task",
     "Ticket",

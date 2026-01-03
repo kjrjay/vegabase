@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
-from vegabase.db import query
 from sqlalchemy import delete, insert, select
 from starlette.responses import RedirectResponse
+from vegabase.db import query
 
 from backend.db.schema import posts
 from backend.initial import db, react

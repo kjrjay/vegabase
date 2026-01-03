@@ -2,8 +2,9 @@
 Ticket CRUD operations.
 """
 
-from sqlalchemy import delete, insert, select, update
+from datetime import UTC
 
+from sqlalchemy import delete, insert, select, update
 from vegabase.db import query
 
 from . import db
@@ -46,9 +47,9 @@ async def get_ticket(ticket_id: int) -> Ticket | None:
 
 async def add_ticket(user_id: int, title: str, description: str) -> int:
     """Add a ticket created by a specific user."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    created_at = datetime.now(timezone.utc).isoformat()
+    created_at = datetime.now(UTC).isoformat()
     async with db.transaction() as conn:
         result = await conn._conn.execute(
             insert(tickets).values(

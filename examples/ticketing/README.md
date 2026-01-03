@@ -1,12 +1,11 @@
-# vegabase: Bun + FastAPI + Inertia + Tailwind
+# vegabase: Bun + FastAPI + Tanstack router + Tailwind
 
 ## Development
 
 ### Prerequisites
 
 - [Bun](https://bun.sh) (v1.0+)
-- Python 3.10+
-- `pip` dependencies installed (`fastapi`, `uvicorn`, `requests`)
+- Python 3.11+
 
 ### Setup
 
@@ -14,19 +13,18 @@
 
    ```bash
    bun install
-   cd frontend && bun install
    ```
 
 2. Install backend dependencies:
 
    ```bash
-   pip install -r requirements.txt
+   uv sync
    ```
 
 3. Setup database:
 
    ```bash
-   vegabase db apply   # Creates tables
+   uv run vegabase db apply   # Creates tables
    ```
 
    On first run, demo data (22 tickets, 8 tasks) is auto-seeded.
@@ -46,7 +44,7 @@ Runs the Bun dev server (port 3001) which handles:
 - **Server-Side Rendering (SSR)** via `/render` endpoint
 
 ```bash
-bun run dev
+vegabase dev bun
 ```
 
 **Terminal 2: FastAPI Backend**
@@ -57,9 +55,7 @@ Runs the Python server (port 8000) which handles:
 - Serving the HTML shell
 
 ```bash
-# Make sure you are in the root directory
-export APP_ENV=development
-python -m backend.main
+vegabase dev py
 ```
 
 Access the app at `http://localhost:8000`
@@ -72,12 +68,12 @@ Access the app at `http://localhost:8000`
 
 1. Build the client and SSR bundles:
    ```bash
-   bun run build
+   vegabase build
    ```
    This generates:
    - `static/dist/client.js` (Client bundle)
    - `static/dist/client.css` (Tailwind CSS)
-   - `backend/ssr.js` (SSR Server bundle)
+   - `.vegabase/ssr.js` (SSR Server bundle)
    - `frontend/pages_map.js` (Generated page map)
 
 ### Running in Production
@@ -85,22 +81,21 @@ Access the app at `http://localhost:8000`
 1. Start the SSR Server:
 
    ```bash
-   nohup bun run start:ssr > ssr.log 2>&1 &
+   nohup vegabase start bun > ssr.log 2>&1 &
    ```
 
 2. Start the FastAPI Server:
    ```bash
-   # Set APP_ENV to production to serve assets from static/dist instead of localhost:3001
-   export APP_ENV=production
-   python -m backend.main
+   # Set VEGABASE_APP_ENV to production (default)
+   vegabase start py
    ```
 
 ## Deployment Artifacts
 
 To deploy to production, you only need these files/folders:
 
-1. **Backend Code**: `backend/main.py`
-2. **SSR Bundle**: `backend/ssr.js`
+1. **Backend Code**: `backend/`
+2. **SSR Bundle**: `.vegabase/ssr.js`
 3. **Static Assets**: `static/dist/`
 4. **Python Deps**: `pyproject.toml` (managed with `uv`)
 
@@ -113,7 +108,5 @@ You do **not** need `node_modules`, `frontend/`, `lib/`, or source TypeScript fi
   - `pages/`: Inertia pages (auto-discovered)
   - `layouts/`: Shared layouts
   - `components/`: Reusable React components
-- `lib/`: Extracted libraries
-  - `python/vegabase/`: Inertia.js integration for FastAPI
-  - `js/vegabase/`: Build and dev CLI tooling
+- `.vegabase/`: Generated entry files (not committed)
 - `static/dist/`: Generated client assets (not committed)

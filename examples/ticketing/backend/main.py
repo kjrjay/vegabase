@@ -2,12 +2,10 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
-
 from vegabase import ReactRenderer
 
 from . import db
@@ -186,7 +184,3 @@ async def delete_ticket_endpoint(ticket_id: int):
 async def about(request: Request):
     """Static page - no JavaScript hydration."""
     return {}
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
