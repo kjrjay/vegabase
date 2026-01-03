@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Node/Bun
+node_modules/
+
+# Generated assets
+static/dist/
+ssr.js
+ssr_dev.js
+
+# Logs
+*.log
+
+.mise.toml
+tasks.db
+.vegabase

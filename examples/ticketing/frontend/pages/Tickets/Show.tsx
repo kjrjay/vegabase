@@ -1,4 +1,4 @@
-import { Head, Link, router } from "@inertiajs/react";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import MainLayout from "../../layouts/MainLayout";
 import type { User, Ticket } from "../../types";
 
@@ -8,14 +8,25 @@ interface TicketsShowProps {
 }
 
 export default function TicketsShow({ user, ticket }: TicketsShowProps) {
-  const handleDelete = () => {
+  const navigate = useNavigate();
+  const router = useRouter();
+
+  const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this ticket?")) {
-      router.delete(`/tickets/${ticket.id}`);
+      await fetch(`/tickets/${ticket.id}`, { method: "DELETE", credentials: "include" });
+      await router.invalidate();
+      navigate({ to: "/tickets" });
     }
   };
 
-  const handleStatusChange = (newStatus: Ticket["status"]) => {
-    router.put(`/tickets/${ticket.id}`, { status: newStatus });
+  const handleStatusChange = async (newStatus: Ticket["status"]) => {
+    await fetch(`/tickets/${ticket.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ status: newStatus }),
+    });
+    await router.invalidate();
   };
 
   const getStatusColor = (status: Ticket["status"]) => {
@@ -31,10 +42,8 @@ export default function TicketsShow({ user, ticket }: TicketsShowProps) {
 
   return (
     <MainLayout user={user}>
-      <Head title={`Ticket #${ticket.id} - ${ticket.title}`} />
-
       <div className="mb-6">
-        <Link href="/tickets" className="text-blue-600 hover:text-blue-700">
+        <Link to="/tickets" className="text-blue-600 hover:text-blue-700">
           ← Back to Tickets
         </Link>
       </div>

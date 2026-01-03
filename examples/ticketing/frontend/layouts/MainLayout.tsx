@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Link, usePage } from "@inertiajs/react";
+import { Link, useLocation } from "@tanstack/react-router";
 import Avatar from "../components/Avatar";
 import type { User } from "../types";
 
@@ -9,13 +9,14 @@ interface MainLayoutProps {
 }
 
 interface NavLinkProps {
-  href: string;
+  to: string;
   children: ReactNode;
   active: boolean;
 }
 
 export default function MainLayout({ children, user }: MainLayoutProps) {
-  const { url } = usePage();
+  const location = useLocation();
+  const url = location.pathname;
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
@@ -26,16 +27,16 @@ export default function MainLayout({ children, user }: MainLayoutProps) {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          <NavLink href="/" active={url === "/"}>
+          <NavLink to="/" active={url === "/"}>
             Dashboard
           </NavLink>
-          <NavLink href="/tasks" active={url.startsWith("/tasks")}>
+          <NavLink to="/tasks" active={url.startsWith("/tasks")}>
             Tasks
           </NavLink>
-          <NavLink href="/tickets" active={url.startsWith("/tickets")}>
+          <NavLink to="/tickets" active={url.startsWith("/tickets")}>
             Tickets
           </NavLink>
-          <NavLink href="/about" active={url === "/about"}>
+          <NavLink to="/about" active={url === "/about"}>
             About
           </NavLink>
         </nav>
@@ -53,7 +54,7 @@ export default function MainLayout({ children, user }: MainLayoutProps) {
             </div>
           ) : (
             <Link
-              href="/login"
+              to="/login"
               className="block text-center px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 text-sm"
             >
               Login
@@ -75,12 +76,13 @@ export default function MainLayout({ children, user }: MainLayoutProps) {
   );
 }
 
-function NavLink({ href, children, active }: NavLinkProps) {
+function NavLink({ to, children, active }: NavLinkProps) {
   return (
     <Link
-      href={href}
-      className={`block px-4 py-3 rounded transition-colors ${active ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
-        }`}
+      to={to}
+      className={`block px-4 py-3 rounded transition-colors ${
+        active ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+      }`}
     >
       {children}
     </Link>

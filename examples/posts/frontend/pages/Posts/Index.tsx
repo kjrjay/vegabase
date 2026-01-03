@@ -1,4 +1,5 @@
-import { Link, router } from "@inertiajs/react";
+import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 
 interface Post {
   id: number;
@@ -7,7 +8,7 @@ interface Post {
 }
 
 interface Flash {
-  type: 'success' | 'error' | 'warning' | 'info';
+  type: "success" | "error" | "warning" | "info";
   message: string;
 }
 
@@ -17,9 +18,18 @@ interface PostsIndexProps {
 }
 
 export default function PostsIndex({ posts, flash }: PostsIndexProps) {
-  const handleDelete = (postId: number) => {
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const handleDelete = async (postId: number) => {
     if (confirm("Are you sure?")) {
-      router.post(`/posts/${postId}/delete`);
+      setDeletingId(postId);
+      try {
+        await fetch(`/posts/${postId}/delete`, { method: "POST" });
+        window.location.reload();
+      } catch (error) {
+        console.error("Delete failed:", error);
+        setDeletingId(null);
+      }
     }
   };
 
@@ -29,7 +39,7 @@ export default function PostsIndex({ posts, flash }: PostsIndexProps) {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Posts</h1>
           <Link
-            href="/posts/create"
+            to="/posts/create"
             className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
           >
             + New Post
@@ -37,11 +47,17 @@ export default function PostsIndex({ posts, flash }: PostsIndexProps) {
         </div>
 
         {flash && (
-          <div className={`px-4 py-3 rounded-lg mb-6 ${flash.type === 'success' ? 'bg-green-100 text-green-800' :
-              flash.type === 'error' ? 'bg-red-100 text-red-800' :
-                flash.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-blue-100 text-blue-800'
-            }`}>
+          <div
+            className={`px-4 py-3 rounded-lg mb-6 ${
+              flash.type === "success"
+                ? "bg-green-100 text-green-800"
+                : flash.type === "error"
+                  ? "bg-red-100 text-red-800"
+                  : flash.type === "warning"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-blue-100 text-blue-800"
+            }`}
+          >
             {flash.message}
           </div>
         )}
@@ -61,9 +77,10 @@ export default function PostsIndex({ posts, flash }: PostsIndexProps) {
                   </div>
                   <button
                     onClick={() => handleDelete(post.id)}
-                    className="text-red-500 hover:text-red-700 text-sm"
+                    disabled={deletingId === post.id}
+                    className="text-red-500 hover:text-red-700 text-sm disabled:opacity-50"
                   >
-                    Delete
+                    {deletingId === post.id ? "Deleting..." : "Delete"}
                   </button>
                 </div>
               </div>
@@ -72,7 +89,7 @@ export default function PostsIndex({ posts, flash }: PostsIndexProps) {
         )}
 
         <div className="mt-8">
-          <Link href="/" className="text-indigo-600 hover:text-indigo-800">
+          <Link to="/" className="text-indigo-600 hover:text-indigo-800">
             ← Back to Home
           </Link>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { router } from "@inertiajs/react";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import type { User } from "../types";
 
 interface AvatarProps {
@@ -9,6 +9,8 @@ interface AvatarProps {
 export default function Avatar({ user }: AvatarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const router = useRouter();
 
   const getInitials = (name: string) => {
     return name
@@ -19,8 +21,10 @@ export default function Avatar({ user }: AvatarProps) {
       .slice(0, 2);
   };
 
-  const handleLogout = () => {
-    router.post("/logout");
+  const handleLogout = async () => {
+    await fetch("/logout", { method: "POST", credentials: "include" });
+    await router.invalidate();
+    navigate({ to: "/" });
   };
 
   // Close dropdown when clicking outside

@@ -1,4 +1,4 @@
-import { Head, Link } from "@inertiajs/react";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import MainLayout from "../layouts/MainLayout";
 import type { User } from "../types";
@@ -75,28 +75,22 @@ function TicketChart({
     );
   }
 
-  const visibleKeys = (Object.keys(visibleLines) as LineKey[]).filter(
-    (k) => visibleLines[k]
-  );
-  const maxValue = Math.max(
-    ...data.flatMap((d) => visibleKeys.map((k) => d[k])),
-    1
-  );
+  const visibleKeys = (Object.keys(visibleLines) as LineKey[]).filter((k) => visibleLines[k]);
+  const maxValue = Math.max(...data.flatMap((d) => visibleKeys.map((k) => d[k])), 1);
   const chartWidth = 600;
   const chartHeight = 200;
   const padding = { top: 20, right: 20, bottom: 40, left: 40 };
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
-  const xScale = (i: number) =>
-    padding.left + (i / (data.length - 1 || 1)) * innerWidth;
-  const yScale = (v: number) =>
-    padding.top + innerHeight - (v / maxValue) * innerHeight;
+  const xScale = (i: number) => padding.left + (i / (data.length - 1 || 1)) * innerWidth;
+  const yScale = (v: number) => padding.top + innerHeight - (v / maxValue) * innerHeight;
 
   const createPath = (key: LineKey) =>
-    data
-      .map((d, i) => `${i === 0 ? "M" : "L"} ${xScale(i)} ${yScale(d[key])}`)
-      .join(" ");
+    data.map((d, i) => `${i === 0 ? "M" : "L"} ${xScale(i)} ${yScale(d[key])}`).join(" ");
+
+  // Compute hovered data point for tooltip
+  const hoveredData = hoveredPoint !== null ? data[hoveredPoint.index] : null;
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -158,9 +152,7 @@ function TicketChart({
                 width={40}
                 height={innerHeight}
                 fill="transparent"
-                onMouseEnter={() =>
-                  setHoveredPoint({ index: i, x: xScale(i), y: padding.top })
-                }
+                onMouseEnter={() => setHoveredPoint({ index: i, x: xScale(i), y: padding.top })}
               />
 
               {/* Data points */}
@@ -204,7 +196,7 @@ function TicketChart({
         </svg>
 
         {/* Tooltip */}
-        {hoveredPoint !== null && (
+        {hoveredPoint && hoveredData && (
           <div
             className="absolute bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg pointer-events-none z-10"
             style={{
@@ -213,16 +205,14 @@ function TicketChart({
               transform: "translateX(-50%)",
             }}
           >
-            <div className="font-semibold mb-1">
-              {formatDate(data[hoveredPoint.index].date, period)}
-            </div>
+            <div className="font-semibold mb-1">{formatDate(hoveredData.date, period)}</div>
             {visibleLines.total && (
               <div className="flex items-center gap-2">
                 <span
                   className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: LINE_COLORS.total }}
                 />
-                Total: {data[hoveredPoint.index].total}
+                Total: {hoveredData.total}
               </div>
             )}
             {visibleLines.open && (
@@ -231,7 +221,7 @@ function TicketChart({
                   className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: LINE_COLORS.open }}
                 />
-                Open: {data[hoveredPoint.index].open}
+                Open: {hoveredData.open}
               </div>
             )}
             {visibleLines.closed && (
@@ -240,7 +230,7 @@ function TicketChart({
                   className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: LINE_COLORS.closed }}
                 />
-                Closed: {data[hoveredPoint.index].closed}
+                Closed: {hoveredData.closed}
               </div>
             )}
           </div>
@@ -256,10 +246,7 @@ function TicketChart({
             className={`flex items-center gap-1.5 transition-opacity ${visibleLines[key] ? "opacity-100" : "opacity-40"
               }`}
           >
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: LINE_COLORS[key] }}
-            />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LINE_COLORS[key] }} />
             <span className="text-xs text-gray-600 capitalize">{key}</span>
           </button>
         ))}
@@ -269,21 +256,16 @@ function TicketChart({
 }
 
 function formatDate(date: string, period: Period): string {
+  const parts = date.split("-");
   if (period === "monthly") {
-    const [year, month] = date.split("-");
+    const year = parts[0] ?? "";
+    const month = parts[1] ?? "";
     return `${month}/${year.slice(2)}`;
   }
-  const parts = date.split("-");
-  return `${parts[1]}/${parts[2]}`;
+  return `${parts[1] ?? ""}/${parts[2] ?? ""}`;
 }
 
-function PeriodToggle({
-  period,
-  onChange,
-}: {
-  period: Period;
-  onChange: (p: Period) => void;
-}) {
+function PeriodToggle({ period, onChange }: { period: Period; onChange: (p: Period) => void }) {
   return (
     <div className="flex bg-gray-100 rounded-lg p-1">
       <button
@@ -323,16 +305,14 @@ function StatsSection({
     <div className="bg-white p-5 rounded-lg shadow-sm border">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">{title}</h2>
-        <Link href={href} className="text-sm text-blue-600 hover:text-blue-800">
+        <Link to={href} className="text-sm text-blue-600 hover:text-blue-800">
           View all →
         </Link>
       </div>
       <div className="grid grid-cols-3 gap-2">
         {items.map((item) => (
           <div key={item.key} className="text-center p-2">
-            <div
-              className={`text-xl font-bold ${item.color.replace("bg-", "text-")}`}
-            >
+            <div className={`text-xl font-bold ${item.color.replace("bg-", "text-")}`}>
               {(stats[item.key] as number) || 0}
             </div>
             <div className="text-xs text-gray-500">{item.label}</div>
@@ -343,24 +323,15 @@ function StatsSection({
   );
 }
 
-export default function Dashboard({
-  user,
-  taskStats,
-  ticketStats,
-  ticketHistory,
-}: DashboardProps) {
+export default function Dashboard({ user, taskStats, ticketStats, ticketHistory }: DashboardProps) {
   const [period, setPeriod] = useState<Period>("weekly");
 
-  const chartData =
-    period === "weekly" ? ticketHistory.weekly : ticketHistory.monthly;
+  const chartData = period === "weekly" ? ticketHistory.weekly : ticketHistory.monthly;
 
   return (
     <MainLayout user={user}>
-      <Head title="Dashboard" />
       <div className="p-6 font-sans">
-        <h1 className="text-2xl font-bold mb-1">
-          Welcome{user ? `, ${user.name}` : ""}!
-        </h1>
+        <h1 className="text-2xl font-bold mb-1">Welcome{user ? `, ${user.name}` : ""}!</h1>
         <p className="text-gray-500 text-sm mb-6">
           Interactive dashboard •{" "}
           <code className="bg-gray-100 px-1 rounded text-xs">mode="client"</code>
@@ -368,11 +339,7 @@ export default function Dashboard({
 
         {/* Chart */}
         <div className="mb-6">
-          <TicketChart
-            data={chartData}
-            period={period}
-            onPeriodChange={setPeriod}
-          />
+          <TicketChart data={chartData} period={period} onPeriodChange={setPeriod} />
         </div>
 
         {/* Stats */}
@@ -408,8 +375,8 @@ export default function Dashboard({
 
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
           <p className="text-blue-800 text-sm">
-            <strong>Render Mode:</strong> Client — Hover for tooltips, click legend
-            to toggle lines. These interactions require JavaScript.
+            <strong>Render Mode:</strong> Client — Hover for tooltips, click legend to toggle lines.
+            These interactions require JavaScript.
           </p>
         </div>
       </div>

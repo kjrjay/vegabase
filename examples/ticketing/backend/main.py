@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from vegabase import Inertia
+from vegabase import ReactRenderer
 
 from . import db
 
@@ -28,8 +28,8 @@ app = FastAPI(lifespan=lifespan)
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)  # type: ignore[arg-type]
 
-# Initialize Inertia
-inertia = Inertia(app)
+# Initialize React renderer
+react = ReactRenderer(app)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -47,6 +47,7 @@ async def get_current_user(request: Request):
 
 
 @app.get("/")
+@react.page("Dashboard", mode="client", cache_time=60)
 async def root(request: Request):
     user = await get_current_user(request)
     # Get real stats from database
@@ -55,29 +56,25 @@ async def root(request: Request):
     # Get ticket history for chart (both weekly and monthly)
     weekly_history = await db.get_ticket_history("weekly")
     monthly_history = await db.get_ticket_history("monthly")
-    return await inertia.render(
-        "Dashboard",
-        {
-            "user": user,
-            "taskStats": stats["tasks"],
-            "ticketStats": stats["tickets"],
-            "ticketHistory": {
-                "weekly": weekly_history,
-                "monthly": monthly_history,
-            },
+    return {
+        "user": user,
+        "taskStats": stats["tasks"],
+        "ticketStats": stats["tickets"],
+        "ticketHistory": {
+            "weekly": weekly_history,
+            "monthly": monthly_history,
         },
-        request,
-        mode="client",
-    )
+    }
 
 
 # Login/Logout
 @app.get("/login")
+@react.page("Login")
 async def login_page(request: Request):
     # If already logged in, redirect to dashboard
     if await get_current_user(request):
         return Response(status_code=303, headers={"Location": "/"})
-    return await inertia.render("Login", {}, request)
+    return {}
 
 
 @app.post("/login")
@@ -94,7 +91,6 @@ async def login(request: Request):
         request.session["user_id"] = user.id
         return Response(status_code=303, headers={"Location": "/"})
     else:
-        # In production, use Inertia's error handling
         return Response(status_code=401, content="Invalid credentials")
 
 
@@ -105,15 +101,14 @@ async def logout(request: Request):
 
 
 @app.get("/tasks")
+@react.page("Tasks/Index", mode="ssr", cache_time=30)
 async def tasks_index(request: Request):
     user = await get_current_user(request)
     if not user:
         return Response(status_code=303, headers={"Location": "/login"})
 
     tasks = await db.get_tasks_for_user(user["id"])
-    return await inertia.render(
-        "Tasks/Index", {"user": user, "tasks": tasks}, request, mode="ssr"
-    )
+    return {"user": user, "tasks": tasks}
 
 
 class TaskCreate(BaseModel):
@@ -130,33 +125,27 @@ async def create_task(request: Request, task: TaskCreate):
     if not user:
         return Response(status_code=401, content="Unauthorized")
     await db.add_task(user["id"], task.title)
-    return Response(status_code=303, headers={"Location": "/tasks"})
+    return Response(status_code=200)
 
 
 @app.put("/tasks/{task_id}")
 async def update_task(task_id: int, task: TaskUpdate):
     await db.update_task(task_id, task.completed)
-    return Response(status_code=303, headers={"Location": "/tasks"})
+    return Response(status_code=200)
 
 
 @app.delete("/tasks/{task_id}")
 async def delete_task(task_id: int):
     await db.delete_task(task_id)
-    return Response(status_code=303, headers={"Location": "/tasks"})
+    return Response(status_code=200)
 
 
 @app.get("/tickets")
+@react.page("Tickets/Index", mode="ssr")
 async def tickets_index(request: Request):
     user = await get_current_user(request)
-    # Public view - use cached mode
     tickets = await db.get_tickets_with_author()
-    return await inertia.render(
-        "Tickets/Index",
-        {"user": user, "tickets": tickets},
-        request,
-        mode="cached",
-        revalidate=60,
-    )
+    return {"user": user, "tickets": tickets}
 
 
 @app.post("/tickets")
@@ -167,41 +156,36 @@ async def create_ticket(request: Request, ticket: dict):
     title = ticket.get("title", "Untitled")
     description = ticket.get("description", "")
     await db.add_ticket(user["id"], title, description)
-    return Response(status_code=303, headers={"Location": "/tickets"})
+    return Response(status_code=200)
 
 
 @app.get("/tickets/{ticket_id}")
+@react.page("Tickets/Show", mode="ssr")
 async def show_ticket(ticket_id: int, request: Request):
     user = await get_current_user(request)
-    # Public view - use cached mode
     ticket = await db.get_ticket(ticket_id)
     if not ticket:
         return Response(status_code=404)
-    return await inertia.render(
-        "Tickets/Show",
-        {"user": user, "ticket": ticket},
-        request,
-        mode="cached",
-        revalidate=60,
-    )
+    return {"user": user, "ticket": ticket}
 
 
 @app.put("/tickets/{ticket_id}")
 async def update_ticket_endpoint(ticket_id: int, ticket: dict):
     await db.update_ticket(ticket_id, status=ticket.get("status"))
-    return Response(status_code=303, headers={"Location": f"/tickets/{ticket_id}"})
+    return Response(status_code=200)
 
 
 @app.delete("/tickets/{ticket_id}")
 async def delete_ticket_endpoint(ticket_id: int):
     await db.delete_ticket(ticket_id)
-    return Response(status_code=303, headers={"Location": "/tickets"})
+    return Response(status_code=200)
 
 
 @app.get("/about")
+@react.page("About", mode="static")
 async def about(request: Request):
     """Static page - no JavaScript hydration."""
-    return await inertia.render("About", {}, request, mode="static")
+    return {}
 
 
 if __name__ == "__main__":

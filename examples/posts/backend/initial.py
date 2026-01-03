@@ -1,7 +1,7 @@
 """Shared application dependencies for FastAPI dependency injection."""
 
 from fastapi import FastAPI
-from vegabase import Inertia
+from vegabase import ReactRenderer
 from vegabase.db import Database, apply
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -17,4 +17,4 @@ app = FastAPI()
 # In production, use a secure secret from environment variables
 app.add_middleware(SessionMiddleware, secret_key="change-this-in-production")  # type: ignore[arg-type]
 
-inertia = Inertia(app)
+react = ReactRenderer(app)

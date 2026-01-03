@@ -1,5 +1,5 @@
-import { type FormEvent } from "react";
-import { Head, useForm, router } from "@inertiajs/react";
+import { type FormEvent, useState } from "react";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import MainLayout from "../../layouts/MainLayout";
 import type { User, Task } from "../../types";
 
@@ -8,26 +8,35 @@ interface TasksIndexProps {
   tasks: Task[];
 }
 
-interface TaskForm {
-  title: string;
-}
+export default function TasksIndex({ user, tasks = [] }: TasksIndexProps) {
+  const [title, setTitle] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const navigate = useNavigate();
+  const router = useRouter();
 
-export default function TasksIndex({ user, tasks }: TasksIndexProps) {
-  const { data, setData, post, processing, reset } = useForm<TaskForm>({
-    title: "",
-  });
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    post("/tasks", {
-      onSuccess: () => reset(),
-    });
+    if (!title.trim()) return;
+
+    setProcessing(true);
+    try {
+      await fetch("/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ title }),
+      });
+      setTitle("");
+      // Invalidate cache and refresh
+      await router.invalidate();
+      navigate({ to: "/tasks" });
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
     <MainLayout user={user}>
-      <Head title="Tasks" />
-
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Tasks</h1>
@@ -41,8 +50,8 @@ export default function TasksIndex({ user, tasks }: TasksIndexProps) {
           <form onSubmit={handleSubmit} className="flex gap-4">
             <input
               type="text"
-              value={data.title}
-              onChange={(e) => setData({ title: e.target.value })}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="What needs to be done?"
               className="flex-1 px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
               disabled={processing}
@@ -79,16 +88,24 @@ interface TaskItemProps {
 }
 
 function TaskItem({ task }: TaskItemProps) {
-  const toggle = () => {
-    router.put(
-      `/tasks/${task.id}`,
-      {
-        completed: !task.completed,
-      },
-      {
-        preserveScroll: true,
-      },
-    );
+  const router = useRouter();
+
+  const toggle = async () => {
+    await fetch(`/tasks/${task.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ completed: !task.completed }),
+    });
+    await router.invalidate();
+  };
+
+  const deleteTask = async () => {
+    await fetch(`/tasks/${task.id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    await router.invalidate();
   };
 
   return (
@@ -115,7 +132,7 @@ function TaskItem({ task }: TaskItemProps) {
       </span>
 
       <button
-        onClick={() => router.delete(`/tasks/${task.id}`)}
+        onClick={deleteTask}
         className="text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all"
       >
         Delete

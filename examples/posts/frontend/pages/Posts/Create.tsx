@@ -1,15 +1,34 @@
-import { Link, useForm } from "@inertiajs/react";
-import { FormEvent } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { FormEvent, useState } from "react";
 
 export default function PostsCreate() {
-  const { data, setData, post, processing, errors } = useForm({
-    title: "",
-    body: "",
-  });
+  const [data, setData] = useState({ title: "", body: "" });
+  const [processing, setProcessing] = useState(false);
+  const [errors, setErrors] = useState<{ title?: string; body?: string }>({});
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    post("/posts/create");
+    setProcessing(true);
+    setErrors({});
+
+    try {
+      const response = await fetch("/posts/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (response.redirected) {
+        window.location.href = response.url;
+      } else if (!response.ok) {
+        const errorData = await response.json();
+        setErrors(errorData.detail || {});
+      }
+    } catch (error) {
+      console.error("Submit failed:", error);
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
@@ -24,7 +43,7 @@ export default function PostsCreate() {
               type="text"
               name="title"
               value={data.title}
-              onChange={(e) => setData("title", e.target.value)}
+              onChange={(e) => setData({ ...data, title: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="Enter post title..."
             />
@@ -36,7 +55,7 @@ export default function PostsCreate() {
             <textarea
               name="body"
               value={data.body}
-              onChange={(e) => setData("body", e.target.value)}
+              onChange={(e) => setData({ ...data, body: e.target.value })}
               rows={6}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="Write your post content..."
@@ -53,7 +72,7 @@ export default function PostsCreate() {
               {processing ? "Creating..." : "Create Post"}
             </button>
             <Link
-              href="/posts"
+              to="/posts"
               className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
             >
               Cancel

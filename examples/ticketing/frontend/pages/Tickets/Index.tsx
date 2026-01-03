@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { Head, Link, router } from "@inertiajs/react";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import MainLayout from "../../layouts/MainLayout";
 import type { User, TicketWithAuthor } from "../../types";
 
@@ -8,24 +8,26 @@ interface TicketsIndexProps {
   tickets: TicketWithAuthor[];
 }
 
-export default function TicketsIndex({ user, tickets }: TicketsIndexProps) {
+export default function TicketsIndex({ user, tickets = [] }: TicketsIndexProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const navigate = useNavigate();
+  const router = useRouter();
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    router.post(
-      "/tickets",
-      { title, description },
-      {
-        onSuccess: () => {
-          setTitle("");
-          setDescription("");
-          setIsCreating(false);
-        },
-      },
-    );
+    await fetch("/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ title, description }),
+    });
+    setTitle("");
+    setDescription("");
+    setIsCreating(false);
+    await router.invalidate();
+    navigate({ to: "/tickets" });
   };
 
   const getStatusColor = (status: TicketWithAuthor["status"]) => {
@@ -41,12 +43,12 @@ export default function TicketsIndex({ user, tickets }: TicketsIndexProps) {
 
   return (
     <MainLayout user={user}>
-      <Head title="Tickets" />
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold">Tickets</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Public view • <code className="bg-gray-100 px-1 rounded">mode="cached"</code> with 60s revalidation
+            Public view • <code className="bg-gray-100 px-1 rounded">mode="cached"</code> with 60s
+            revalidation
           </p>
         </div>
         {user ? (
@@ -58,7 +60,7 @@ export default function TicketsIndex({ user, tickets }: TicketsIndexProps) {
           </button>
         ) : (
           <Link
-            href="/login"
+            to="/login"
             className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
           >
             Login to create tickets
@@ -113,7 +115,8 @@ export default function TicketsIndex({ user, tickets }: TicketsIndexProps) {
             {tickets.map((ticket) => (
               <Link
                 key={ticket.id}
-                href={`/tickets/${ticket.id}`}
+                to={`/tickets/$id`}
+                params={{ id: String(ticket.id) }}
                 className="block p-4 hover:bg-gray-50 transition"
               >
                 <div className="flex justify-between items-start">
@@ -123,7 +126,8 @@ export default function TicketsIndex({ user, tickets }: TicketsIndexProps) {
                       <p className="text-gray-600 text-sm line-clamp-2">{ticket.description}</p>
                     )}
                     <p className="text-gray-400 text-xs mt-2">
-                      By <span className="font-medium">{ticket.author_name}</span> • {new Date(ticket.created_at).toLocaleString("en-US")}
+                      By <span className="font-medium">{ticket.author_name}</span> •{" "}
+                      {new Date(ticket.created_at).toLocaleString("en-US")}
                     </p>
                   </div>
                   <span

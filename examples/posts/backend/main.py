@@ -1,11 +1,11 @@
-"""Posts example - PyReact Start backend."""
+"""Posts example - Vegabase backend."""
 
 import pathlib
 
 from fastapi import Request
 from fastapi.staticfiles import StaticFiles
 
-from backend.initial import app, inertia
+from backend.initial import app, react
 from backend.routes import posts
 
 # Mount static files
@@ -17,10 +17,9 @@ app.include_router(posts.router)
 
 
 @app.get("/")
+@react.page("Home")
 async def home(request: Request):
-    return await inertia.render(
-        "Home", {"message": "Welcome to Posts Example!"}, request
-    )
+    return {"message": "Welcome to Posts Example!"}
 
 
 if __name__ == "__main__":
