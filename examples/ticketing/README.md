@@ -62,6 +62,39 @@ Access the app at `http://localhost:8000`
 
 ---
 
+## Configuration
+
+Vegabase uses [Dynaconf](https://www.dynaconf.com/) for settings. Create a `settings.yaml` in the project root:
+
+```yaml
+default:
+  DATABASE_URL: "sqlite:///app.db"
+  SECRET_KEY: "change-me-in-production"
+
+development:
+  DEBUG: true
+
+production:
+  DATABASE_URL: "postgresql://user:pass@host/db"
+```
+
+Override any setting with environment variables:
+
+```bash
+VEGABASE_DATABASE_URL="postgresql://..." vegabase start py
+```
+
+## Logging
+
+Request logging is automatic. Both Python and Bun servers log:
+
+```
+2026-01-04T21:09:01+0000 INFO GET /dashboard 200 45ms
+2026-01-04T21:09:01+0000 INFO POST /tickets/create 303 123ms
+```
+
+---
+
 ## Production
 
 ### Building
@@ -101,12 +134,4 @@ To deploy to production, you only need these files/folders:
 
 You do **not** need `node_modules`, `frontend/`, `lib/`, or source TypeScript files in the production environment.
 
-## Project Structure
 
-- `backend/`: FastAPI application and generated SSR bundle
-- `frontend/`: React source code
-  - `pages/`: Inertia pages (auto-discovered)
-  - `layouts/`: Shared layouts
-  - `components/`: Reusable React components
-- `.vegabase/`: Generated entry files (not committed)
-- `static/dist/`: Generated client assets (not committed)

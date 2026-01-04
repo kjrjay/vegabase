@@ -11,7 +11,7 @@ export default function About() {
           <h2 className="text-xl font-semibold mb-3">What is Vegabase?</h2>
           <p className="text-gray-700 leading-relaxed">
             Vegabase is a Python web framework that brings the power of server-side rendering to
-            your React applications. Built on FastAPI and Inertia.js, it provides a seamless
+            your React applications. Built on FastAPI and Tanstack router, it provides a seamless
             full-stack development experience.
           </p>
         </section>

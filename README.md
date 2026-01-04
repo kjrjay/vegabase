@@ -36,10 +36,10 @@ cd my-app
 uv sync && bun install
 
 # Terminal 1: Frontend dev server
-vegabase dev
+vegabase dev bun
 
 # Terminal 2: Backend
-APP_ENV=development python -m backend.main
+vegabase dev py
 ```
 
 Visit `http://localhost:8000` 🎉
@@ -49,9 +49,11 @@ Visit `http://localhost:8000` 🎉
 | Command | Description |
 |---------|-------------|
 | `vegabase init` | Create a new project |
-| `vegabase dev` | Start dev server with hot reloading |
+| `vegabase dev bun` | Start Bun dev server (SSR + hot reload) |
+| `vegabase dev py` | Start Python dev server |
 | `vegabase build` | Build optimized production bundles |
-| `vegabase ssr` | Start the SSR server for production |
+| `vegabase start bun` | Start SSR server for production |
+| `vegabase start py` | Start Python server for production |
 | `vegabase db plan` | Preview database schema changes |
 | `vegabase db apply` | Apply schema changes to database |
 
@@ -184,23 +186,81 @@ vegabase db plan   # Preview changes
 vegabase db apply  # Apply changes
 ```
 
-## Project Structure
+## Configuration
+
+Vegabase uses [Dynaconf](https://www.dynaconf.com/) for layered configuration with environment support.
+
+### Settings Files
+
+Create any of these in your project root (loaded in order, later overrides earlier):
 
 ```
-my-app/
-├── backend/
-│   ├── main.py           # FastAPI application
-│   └── db/
-│       └── schema.py     # Database tables
-├── frontend/
-│   ├── pages/            # React pages (auto-discovered)
-│   ├── components/       # Reusable components
-│   └── styles.css        # Tailwind entry point
-├── static/dist/          # Generated assets (gitignored)
-├── .vegabase/            # Generated entry files (gitignored)
-├── package.json          # JS dependencies
-└── pyproject.toml        # Python dependencies
+settings.yaml          # Base settings
+settings.toml          # Alternative format
+.secrets.yaml          # Sensitive values (gitignored)
+settings.local.yaml    # Local overrides (gitignored)
 ```
+
+### Environment Layering
+
+```yaml
+# settings.yaml
+default:
+  DATABASE_URL: "sqlite:///app.db"
+
+development:
+  DEBUG: true
+
+production:
+  DATABASE_URL: "postgresql://..."
+```
+
+Switch environments with `VEGABASE_APP_ENV`:
+
+```bash
+VEGABASE_APP_ENV=production python -m backend.main
+```
+
+### Accessing Settings
+
+```python
+from vegabase import settings
+
+print(settings.DATABASE_URL)
+print(settings.get("OPTIONAL_KEY", default="fallback"))
+```
+
+All settings can be overridden via environment variables with `VEGABASE_` prefix:
+
+```bash
+VEGABASE_DATABASE_URL="postgresql://..." python -m backend.main
+```
+
+## Logging
+
+Vegabase includes structured logging out of the box:
+
+- **Request timing**: Every request logs method, path, status, and duration
+- **Consistent format**: ISO timestamps across Python and Bun servers
+- **Customizable**: Override via `LOGGING` in your settings file
+
+Example output:
+
+```
+2026-01-04T21:09:01+0000 INFO vegabase.access GET /posts 200 45ms
+2026-01-04T21:09:01+0000 INFO vegabase.access POST /posts/create 303 123ms
+```
+
+Customize logging in `settings.yaml`:
+
+```yaml
+default:
+  LOGGING:
+    dynaconf_merge: true  # Extend defaults instead of replacing
+    root:
+      level: DEBUG
+```
+
 
 ## Production
 
@@ -209,10 +269,10 @@ my-app/
 vegabase build
 
 # Start the SSR server (background)
-vegabase ssr &
+vegabase start bun &
 
 # Start the FastAPI server
-APP_ENV=production python -m backend.main
+vegabase start py
 ```
 
 ## Examples

@@ -27,3 +27,13 @@ You can specify custom ports if needed:
 vegabase dev bun --port 4001
 vegabase dev py --port 8001
 ```
+
+## Production
+
+```bash
+# Build assets
+vegabase build
+# Start SSR Server
+nohup vegabase start bun > ssr.log 2>&1 &
+# Start Backend
+vegabase start py
