@@ -4,9 +4,10 @@ import pathlib
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from vegabase import ReactRenderer
+from vegabase import ReactRenderer, TimingMiddleware
 
 app = FastAPI()
+app.add_middleware(TimingMiddleware)
 
 # Initialize ReactRenderer
 react = ReactRenderer(app)

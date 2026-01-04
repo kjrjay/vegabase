@@ -1,0 +1,28 @@
+default:
+  LOGGING:
+    version: 1
+    disable_existing_loggers: false
+    formatters:
+      default:
+        format: "%(asctime)s %(levelname)s %(name)s %(message)s"
+        datefmt: "%Y-%m-%dT%H:%M:%S%z"
+    handlers:
+      default:
+        formatter: default
+        class: logging.StreamHandler
+    loggers:
+      # Suppress uvicorn's access logs - we use TimingMiddleware instead
+      uvicorn.access:
+        level: WARNING
+    root:
+      handlers: [default]
+      level: INFO
+  ssr_url: "http://localhost:13714/render"
+  assets_url: "/static/dist"
+development:
+  LOGGING:
+    dynaconf_merge: true
+    root:
+      level: INFO
+  ssr_url: "http://localhost:3001/render"
+  assets_url: "http://localhost:3001"

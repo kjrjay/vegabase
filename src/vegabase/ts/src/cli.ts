@@ -2,6 +2,7 @@ import { watch } from "fs";
 import path from "node:path";
 import fs from "node:fs";
 import { Glob } from "bun";
+import { logRequest } from "./log";
 
 // User's project directory (cwd)
 const projectDir = process.cwd();
@@ -90,33 +91,13 @@ function generateRouteTree(manifest: RouteManifest): string {
         ? `\`${route.path.replace(/\$(\w+)/g, "${params.$1}")}\``
         : `'${route.path}'`;
 
-      return `
-function ${factoryName}(parentRoute: any) {
-  return createRoute({
-    getParentRoute: () => parentRoute,
-    path: '${route.path}',
-    component: function ${componentVar}Wrapper() {
-      const data = useLoaderData({ from: '${route.path}' });
-      return <${componentVar} {...data} />;
-    },
-    loader: async ({ context, params }) => {
-      // During SSR, use ssrProps that were set before render
-      if (ssrProps) {
-        const props = ssrProps;
-        ssrProps = null;  // Clear after use
-        return props;
-      }
-      // During client-side navigation, fetch from backend
-      const res = await fetch(${fetchPath}, {
-        headers: { 'X-Vegabase': 'true', 'Accept': 'application/json' },
-        credentials: 'include'
-      });
-      const data = await res.json();
-      return data.props;
-    },
-    ${staleTime > 0 ? `staleTime: ${staleTime},` : ""}
-  });
-}`.trim();
+      return loadTemplate('route.template.tsx', {
+        '__FACTORY_NAME__': factoryName,
+        '__ROUTE_PATH__': route.path,
+        '__COMPONENT_VAR__': componentVar,
+        '__FETCH_PATH__': fetchPath,
+        '__STALE_TIME__': staleTime > 0 ? `staleTime: ${staleTime},` : "",
+      }).trim();
     })
     .join("\n\n");
 
@@ -157,8 +138,11 @@ function generateTanStackSSREntry(): string {
  * Generate TanStack Router SSR server entry
  */
 function generateTanStackSSRServerEntry(): string {
+  // Get the path to log.ts relative to where this cli is running
+  const logPath = path.join((import.meta as any).dir, 'log');
   return loadTemplate('ssr-server.template.tsx', {
     '__DEFAULT_PORT__': '13714',
+    '__LOG_PATH__': logPath,
   });
 }
 
@@ -255,13 +239,18 @@ async function dev() {
 
       // SSR Render Endpoint
       if (req.method === "POST" && url.pathname === "/render") {
+        const startTime = Date.now();
         try {
           const buildPath = `${vegabaseDir}/ssr_dev.js`;
           const { default: render } = await import(buildPath + `?t=${Date.now()}`);
           const page = await req.json();
           const result = await render(page);
+          const duration = Date.now() - startTime;
+          logRequest(req.method, page.url, page.component, 200, duration);
           return Response.json(result);
         } catch (error: any) {
+          const duration = Date.now() - startTime;
+          logRequest(req.method, "/render", null, 500, duration);
           console.error("SSR Error:", error);
           return new Response(JSON.stringify({ error: error.message }), { status: 500 });
         }

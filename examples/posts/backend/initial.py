@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
-from vegabase import ReactRenderer
+from vegabase import ReactRenderer,TimingMiddleware
 from vegabase.db import Database, apply
 
 from backend.db.schema import DATABASE_URL, metadata
@@ -12,6 +12,7 @@ db = Database(DATABASE_URL)
 apply(db.engine, metadata)
 
 app = FastAPI()
+app.add_middleware(TimingMiddleware)
 
 # Add session middleware for flash messages
 # In production, use a secure secret from environment variables

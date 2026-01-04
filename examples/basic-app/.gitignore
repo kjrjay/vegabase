@@ -14,8 +14,6 @@ node_modules/
 
 # Generated assets
 static/dist/
-ssr.js
-ssr_dev.js
 
 # Logs
 *.log

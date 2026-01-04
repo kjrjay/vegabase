@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
-from vegabase import ReactRenderer
+from vegabase import ReactRenderer, TimingMiddleware
 
 from . import db
 
@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(TimingMiddleware)
 
 # Add session middleware
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")

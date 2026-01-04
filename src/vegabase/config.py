@@ -11,7 +11,7 @@ if "VEGABASE_APP_ENV" not in os.environ:
 
 # Get the directory where this file is located (vegabase package dir)
 BASE_DIR = Path(__file__).parent
-DEFAULT_SETTINGS_PATH = BASE_DIR / "default_settings.toml"
+DEFAULT_SETTINGS_PATH = BASE_DIR / "default_settings.yaml"
 
 settings = Dynaconf(
     envvar_prefix="VEGABASE",
@@ -19,7 +19,14 @@ settings = Dynaconf(
     preload=[str(DEFAULT_SETTINGS_PATH)],
     # Load user settings from the current working directory
     # Order matters: later files override earlier ones
-    settings_files=["settings.toml", ".secrets.toml", "settings.local.toml"],
+    settings_files=[
+        "settings.toml",
+        "settings.yaml",
+        ".secrets.toml",
+        ".secrets.yaml",
+        "settings.local.toml",
+        "settings.local.yaml",
+    ],
     # Enable environment layering (e.g. [development], [production])
     environments=True,
     # Switch environment using VEGABASE_APP_ENV
@@ -31,6 +38,7 @@ settings = Dynaconf(
 settings.validators.register(
     Validator("SSR_URL", must_exist=True),
     Validator("ASSETS_URL", must_exist=True),
+    Validator("LOGGING", must_exist=True),
 )
 
 settings.validators.validate()
